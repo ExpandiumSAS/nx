@@ -14,7 +14,7 @@ namespace nx {
 
 using strings = std::vector<std::string>;
 
-HXX_API
+NX_API
 std::string
 demangle_type_name(const std::string& mangled);
 
@@ -30,26 +30,26 @@ std::string
 type_info()
 { return demangle_type_name(typeid(T).name()); }
 
-HXX_API
+NX_API
 std::string
 lc(const std::string& s);
 
-HXX_API
+NX_API
 void split(
     const std::string& re,
     const std::string& expr,
     strings& list
 );
 
-HXX_API
+NX_API
 bool
 match(const std::string& expr, const std::string& re);
 
-HXX_API
+NX_API
 bool
 match(const std::string& expr, const std::string& re, std::smatch& m);
 
-HXX_API
+NX_API
 std::string
 subst(const std::string& s, const std::string& re, const std::string& what);
 

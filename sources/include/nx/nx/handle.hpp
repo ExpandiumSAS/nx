@@ -8,7 +8,11 @@ namespace nx {
 class NX_API handle
 {
 public:
+    handle(int fh);
+    virtual ~handle();
+
 private:
+    int fh_;
 };
 
 } // namespace nx

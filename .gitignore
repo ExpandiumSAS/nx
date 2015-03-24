@@ -1,0 +1,6 @@
+# CBUILD_GITIGNORE BEGIN
+.cbuild
+build
+CMakeLists.txt
+Makefile
+# CBUILD_GITIGNORE END
