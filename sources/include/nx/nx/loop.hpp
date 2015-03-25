@@ -12,7 +12,10 @@ namespace nx {
 class NX_API loop
 {
 public:
-    static void start();
+    static loop& get();
+
+    void start();
+    void stop();
 
 private:
     loop();
@@ -25,8 +28,6 @@ private:
 
     void lock();
     void unlock();
-
-    void run();
 
     std::mutex m_;
     std::condition_variable cv_;
