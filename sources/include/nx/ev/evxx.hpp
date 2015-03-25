@@ -38,7 +38,8 @@
  */
 
 // C++11/14 updates
-//
+// Copyright (c) 2015 Remy Chibois <chybz@chybz.net>
+// All rights reserved.
 
 #ifndef EVPP_H__
 #define EVPP_H__

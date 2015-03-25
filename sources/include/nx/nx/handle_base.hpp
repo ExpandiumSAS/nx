@@ -39,6 +39,7 @@ public:
     >;
 
     handle_base(int fh) noexcept
+    : fh_(fh)
     {}
 
     virtual ~handle_base()
