@@ -1,9 +1,14 @@
 #ifndef __NX_HANDLE_BASE_H__
 #define __NX_HANDLE_BASE_H__
 
+#include <type_traits>
+
+#include <ev/evxx.hpp>
+
 #include <nx/config.h>
 
 #include <nx/callbacks.hpp>
+#include <nx/buffer.hpp>
 
 namespace nx {
 
@@ -27,6 +32,9 @@ class handle_base
 public:
     using callbacks = nx::callbacks<
         callback<tags::on_error_tag, Derived&, const char*>,
+        callback<tags::on_read_tag, Derived&, buffer&>,
+        callback<tags::on_eof_tag, Derived&>,
+        callback<tags::on_drain_tag, Derived&>,
         Callbacks...
     >;
 
@@ -35,6 +43,21 @@ public:
 
     virtual ~handle_base()
     {}
+
+    template <
+        typename Tag,
+        typename Enabled = typename std::enable_if<
+            std::is_base_of<callback_tag, Tag>::value
+        >::type
+    >
+    auto&
+    handler(const Tag& t)
+    { return callbacks_.get(t); }
+
+    template <typename Tag>
+    auto&
+    operator[](const Tag& t)
+    { return handler(t); }
 
 private:
     /// CRTP interface
