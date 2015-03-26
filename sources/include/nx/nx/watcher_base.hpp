@@ -16,18 +16,23 @@ class watcher_base : public Watcher
 public:
     using base_type = Watcher;
     using this_type = watcher_base<Derived, Watcher>;
-    using watch_cb = std::function<void(Derived&, int)>;
+    using cb_type = std::function<void(Derived&, int)>;
 
     watcher_base() noexcept
     {
-        data = static_cast<void*>(this);
+        this->data = static_cast<void*>(this);
         ev_init(this, 0);
     }
 
-    virtual ~watcher_base()
-    {}
+    watcher_base(const this_type& other) = delete;
 
-    this_type& operator=(watch_cb cb)
+    virtual ~watcher_base()
+    { stop(); }
+
+    virtual void start() = 0;
+    virtual void stop() = 0;
+
+    this_type& operator=(cb_type cb)
     {
         cb_ = cb;
 
@@ -38,6 +43,8 @@ public:
                 callback_access::call(me, revents);
             }
         );
+
+        return *this;
     }
 
     bool is_active() const noexcept
@@ -61,7 +68,7 @@ private:
     Derived const& derived() const
     { return *static_cast<Derived const*>(this); }
 
-    watch_cb cb_;
+    cb_type cb_;
 };
 
 } // namespace nx
