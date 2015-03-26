@@ -43,7 +43,7 @@ public:
 
         ev_set_cb(
             ptr(),
-            [](base_type* w, int revents) {
+            [](auto l, base_type* w, int revents) {
                 auto& me = watcher_cast<this_type>(w);
                 callback_access::call<on_events>(me, revents);
             }

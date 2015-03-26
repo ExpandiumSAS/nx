@@ -17,7 +17,7 @@ using timestamp = ev_tstamp;
 class NX_API loop
 {
 public:
-    using loop_cb = std::function<void()>;
+    using loop_cb = std::function<void(evloop)>;
 
     static loop& get();
 
@@ -38,6 +38,7 @@ private:
     void lock();
     void unlock();
 
+    struct ev_loop* l_;
     std::recursive_mutex m_;
     std::condition_variable cv_;
     std::thread t_;
