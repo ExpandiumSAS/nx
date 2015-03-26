@@ -11,6 +11,10 @@ class io : public watcher_base<io, ev_io>
 public:
     using base_type = watcher_base<io, ev_io>;
 
+    io()
+    : base_type()
+    {}
+
     virtual void start() noexcept
     { loop::get()([&](evloop el) { ev_io_start(el, ptr()); }); }
 
@@ -43,6 +47,10 @@ class timer : public watcher_base<timer, ev_timer>
 {
 public:
     using base_type = watcher_base<timer, ev_timer>;
+
+    timer()
+    : base_type()
+    {}
 
     virtual void start() noexcept
     { loop::get()([&](evloop el) { ev_timer_start(el, ptr()); }); }
