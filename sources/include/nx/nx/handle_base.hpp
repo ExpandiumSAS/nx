@@ -2,6 +2,7 @@
 #define __NX_HANDLE_BASE_H__
 
 #include <type_traits>
+#include <memory>
 
 #include <nx/config.h>
 
@@ -35,6 +36,7 @@ public:
         callback<tags::on_drain_tag, Derived&>,
         Callbacks...
     >;
+    using ptr_type = std::shared_ptr<Derived>;
 
     handle_base(int fh) noexcept
     : fh_(fh)
