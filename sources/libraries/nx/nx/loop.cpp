@@ -1,4 +1,4 @@
-#include <ev.h>
+#include <iostream>
 
 #include <nx/loop.hpp>
 
@@ -16,8 +16,10 @@ loop::start()
 {
     t_ = std::thread(
         [this]() {
+            ev_loop_fork();
+
             lock();
-            ev_run(ev_default_loop(), 0);
+            ev_run(0);
             unlock();
         }
     );
@@ -26,8 +28,22 @@ loop::start()
 void
 loop::stop()
 {
-    ev_break(ev_default_loop(), 0);
+    {
+        std::lock_guard<std::recursive_mutex> lock(m_);
+        ev_break(EVBREAK_ALL);
+        ev_async_send(&async_w_);
+        ev_async_stop(&async_w_);
+    }
+
     t_.join();
+}
+
+void
+loop::operator()(loop_cb cb)
+{
+    std::lock_guard<std::recursive_mutex> lock(m_);
+    cb();
+    ev_async_send(&async_w_);
 }
 
 void
@@ -40,21 +56,28 @@ loop::unlock()
 
 loop::loop()
 {
-    ev_set_userdata(ev_default_loop(), static_cast<void*>(this));
+    ev_async_init(
+        &async_w_,
+        [](ev_async* a, int events) {}
+    );
+
+    ev_async_start(&async_w_);
+
+    ev_set_userdata(static_cast<void*>(this));
+
     ev_set_loop_release_cb(
-        ev_default_loop(),
-        [](struct ev_loop* el) {
-            auto& l = *static_cast<loop*>(ev_userdata(el));
+        []() {
+            auto& l = *static_cast<loop*>(ev_userdata());
             l.unlock();
         },
-        [](struct ev_loop* el) {
-            auto& l = *static_cast<loop*>(ev_userdata(el));
+        []() {
+            auto& l = *static_cast<loop*>(ev_userdata());
             l.lock();
         }
     );
 }
 
 loop::~loop()
-{}
+{ stop(); }
 
 } // namespace nx

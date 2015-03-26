@@ -1,11 +1,11 @@
 #ifndef __NX_EVENT_H__
 #define __NX_EVENT_H__
 
-#include <ev.h>
+#include <nx/ev.hpp>
 
 namespace nx {
 
-enum class event
+enum class event : int
 {
     undef    = EV_UNDEF,
     none     = EV_NONE,

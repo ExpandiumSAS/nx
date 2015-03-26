@@ -3,8 +3,6 @@
 
 #include <type_traits>
 
-#include <ev/evxx.hpp>
-
 #include <nx/config.h>
 
 #include <nx/callbacks.hpp>

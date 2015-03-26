@@ -4,18 +4,27 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <functional>
 
+#include <nx/ev.hpp>
 #include <nx/config.h>
 
 namespace nx {
 
+using evloop = struct ev_loop*;
+using timestamp = ev_tstamp;
+
 class NX_API loop
 {
 public:
+    using loop_cb = std::function<void()>;
+
     static loop& get();
 
     void start();
     void stop();
+
+    void operator()(loop_cb cb);
 
 private:
     loop();
@@ -29,9 +38,10 @@ private:
     void lock();
     void unlock();
 
-    std::mutex m_;
+    std::recursive_mutex m_;
     std::condition_variable cv_;
     std::thread t_;
+    struct ev_async async_w_;
 };
 
 } // namespace nx
