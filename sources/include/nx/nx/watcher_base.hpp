@@ -21,6 +21,7 @@ public:
     struct on_events {};
 
     watcher_base() noexcept
+    : cb_(nullptr)
     { ev_init(this, 0); }
 
     watcher_base(const this_type& other) = delete;
