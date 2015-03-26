@@ -12,10 +12,10 @@ public:
     using base_type = watcher_base<io, ev_io>;
 
     virtual void start() noexcept
-    { loop::get()([&](auto l) { ev_io_start(l, ptr()); }); }
+    { loop::get()([&](evloop el) { ev_io_start(el, ptr()); }); }
 
     virtual void stop() noexcept
-    { loop::get()([&](auto l) { ev_io_stop(l, ptr()); }); }
+    { loop::get()([&](evloop el) { ev_io_stop(el, ptr()); }); }
 
     io& operator()(int fd, int events) noexcept
     {
@@ -45,10 +45,10 @@ public:
     using base_type = watcher_base<timer, ev_timer>;
 
     virtual void start() noexcept
-    { loop::get()([&](auto l) { ev_timer_start(l, ptr()); }); }
+    { loop::get()([&](evloop el) { ev_timer_start(el, ptr()); }); }
 
     virtual void stop() noexcept
-    { loop::get()([&](auto l) { ev_timer_stop(l, ptr()); }); }
+    { loop::get()([&](evloop el) { ev_timer_stop(el, ptr()); }); }
 
     timer& operator()(timestamp after, timestamp repeat = 0.) noexcept
     {
@@ -63,13 +63,13 @@ public:
     }
 
     void again() noexcept
-    { loop::get()([&](auto l) { ev_timer_again(l, ptr()); }); }
+    { loop::get()([&](evloop el) { ev_timer_again(el, ptr()); }); }
 
     timestamp remaining()
     {
         timestamp t;
 
-        loop::get()([&](auto l) { t = ev_timer_remaining(l, ptr()); });
+        loop::get()([&](evloop el) { t = ev_timer_remaining(el, ptr()); });
 
         return t;
     }
