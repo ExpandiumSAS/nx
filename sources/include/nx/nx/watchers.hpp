@@ -36,6 +36,12 @@ public:
         start();
     }
 
+    io& operator=(watcher_event_cb cb)
+    {
+        base_type::operator=(cb);
+        return *this;
+    }
+
     io& operator=(event_cb cb)
     {
         base_type::operator=(cb);
@@ -56,7 +62,7 @@ public:
     { loop::get()([&](evloop el) { ev_timer_start(el, ptr()); }); }
 
     virtual void stop() noexcept
-    { loop::get()([&](evloop el) { std::cout << "stop timer" << std::endl; ev_timer_stop(el, ptr()); }); }
+    { loop::get()([&](evloop el) { ev_timer_stop(el, ptr()); }); }
 
     timer& operator()(timestamp after, timestamp repeat = 0.) noexcept
     {
@@ -80,6 +86,12 @@ public:
         loop::get()([&](evloop el) { t = ev_timer_remaining(el, ptr()); });
 
         return t;
+    }
+
+    timer& operator=(watcher_event_cb cb)
+    {
+        base_type::operator=(cb);
+        return *this;
     }
 
     timer& operator=(event_cb cb)
