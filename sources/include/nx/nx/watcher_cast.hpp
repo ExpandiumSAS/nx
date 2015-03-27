@@ -6,8 +6,8 @@ namespace nx {
 template <typename Class, typename Watcher>
 inline
 Class&
-watcher_cast(Watcher* h)
-{ return *static_cast<Class*>(h); }
+watcher_cast(Watcher* w)
+{ return *static_cast<Class*>(w->data); }
 
 } // namespace nx
 

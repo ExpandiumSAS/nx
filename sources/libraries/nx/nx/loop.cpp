@@ -80,6 +80,9 @@ loop::loop()
 }
 
 loop::~loop()
-{ stop(); }
+{
+    stop();
+    ev_loop_destroy(l_);
+}
 
 } // namespace nx

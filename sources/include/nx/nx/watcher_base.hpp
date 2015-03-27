@@ -1,6 +1,7 @@
 #ifndef __NX_WATCHER_BASE_H__
 #define __NX_WATCHER_BASE_H__
 
+#include <cstring>
 #include <functional>
 
 #include <nx/loop.hpp>
@@ -10,10 +11,10 @@
 namespace nx {
 
 template <typename Derived, typename Watcher>
-class watcher_base : public Watcher
+class watcher_base
 {
 public:
-    using base_type = Watcher;
+    using watcher_type = Watcher;
     using this_type = watcher_base<Derived, Watcher>;
     using event_cb = std::function<void(Derived&, int)>;
     using set_cb = std::function<void()>;
@@ -22,7 +23,11 @@ public:
 
     watcher_base() noexcept
     : cb_(nullptr)
-    { ev_init(this, 0); }
+    {
+        std::memset((void*) &w_, 0, sizeof(watcher_type));
+        ev_init(&w_, 0);
+        w_.data = static_cast<void*>(this);
+    }
 
     watcher_base(const this_type& other) = delete;
 
@@ -40,11 +45,10 @@ public:
     this_type& operator=(event_cb cb)
     {
         cb_ = cb;
-        this->data = static_cast<void*>(this);
 
         ev_set_cb(
             ptr(),
-            [](auto l, base_type* w, int revents) {
+            [](auto l, watcher_type* w, int revents) {
                 auto& me = watcher_cast<this_type>(w);
                 callback_access::call<on_events>(me, revents);
             }
@@ -59,11 +63,17 @@ public:
     bool is_pending() const noexcept
     { return ev_is_pending(ptr()); }
 
-    base_type* ptr()
-    { return static_cast<base_type*>(this); }
+    watcher_type& w()
+    { return w_; }
 
-    const base_type* ptr() const
-    { return static_cast<const base_type*>(this); }
+    const watcher_type& w() const
+    { return w_; }
+
+    watcher_type* ptr()
+    { return &w_; }
+
+    const watcher_type* ptr() const
+    { return &w_; }
 
 protected:
     void set(set_cb cb) noexcept
@@ -94,6 +104,7 @@ private:
     { return *static_cast<Derived const*>(this); }
 
     event_cb cb_;
+    watcher_type w_;
 };
 
 } // namespace nx

@@ -28,7 +28,7 @@ public:
     }
 
     io& operator()(int events) noexcept
-    { return (*this)(fd, events); }
+    { return (*this)(w().fd, events); }
 
     void start(int fd, int events) noexcept
     {
@@ -56,7 +56,7 @@ public:
     { loop::get()([&](evloop el) { ev_timer_start(el, ptr()); }); }
 
     virtual void stop() noexcept
-    { loop::get()([&](evloop el) { ev_timer_stop(el, ptr()); }); }
+    { loop::get()([&](evloop el) { std::cout << "stop timer" << std::endl; ev_timer_stop(el, ptr()); }); }
 
     timer& operator()(timestamp after, timestamp repeat = 0.) noexcept
     {
