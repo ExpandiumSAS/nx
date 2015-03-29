@@ -18,15 +18,20 @@ using timestamp = ev_tstamp;
 using loop_cb = std::function<void(evloop)>;
 using void_cb = std::function<void()>;
 
+struct loop_op
+{
+    loop_cb cb;
+    void_cb h;
+};
+
 class NX_API loop
 {
 public:
     static loop& get();
 
-    loop& operator()(loop_cb&& cb);
-    loop& operator()(void_cb&& cb);
     loop& operator<<(loop_cb&& cb);
     loop& operator<<(void_cb&& cb);
+    loop& operator<<(loop_op&& op);
 
 private:
     loop();
@@ -40,10 +45,10 @@ private:
     void start();
     void stop();
 
-    loop& enqueue(loop_cb&& cb);
+    loop& enqueue(loop_op&& op);
 
 private:
-    using queue_type = moodycamel::ConcurrentQueue<loop_cb>;
+    using queue_type = moodycamel::ConcurrentQueue<loop_op>;
 
     evloop l_;
     struct ev_async async_w_;

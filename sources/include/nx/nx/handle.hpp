@@ -16,6 +16,7 @@
 #include <nx/callbacks.hpp>
 #include <nx/buffer.hpp>
 #include <nx/watchers.hpp>
+#include <nx/cond_var.hpp>
 #include <nx/error_code.hpp>
 
 namespace nx {
@@ -51,7 +52,9 @@ public:
     handle(int fh) noexcept
     : fh_(fh),
     no_eof_(false),
-    io_(fh)
+    io_(fh),
+    closing_(false),
+    closed_(false)
     {
         io_ = [&](int events) {
             if (events & ERROR) {
@@ -72,7 +75,27 @@ public:
     handle(const this_type& other) = delete;
 
     virtual ~handle()
-    {}
+    { close(); }
+
+    void close()
+    {
+        if (closed_) {
+            return;
+        }
+
+        io_ ^= READ;
+        closing_ = true;
+        start_write();
+        close_cv_.wait();
+
+        handle_error(
+            "shutdown",
+            shutdown(fh_, SHUT_WR)
+        );
+
+        io_.stop();
+        closed_ = true;
+    }
 
     void set_nonblocking()
     {
@@ -102,32 +125,20 @@ public:
 
     this_type&
     operator<<(const char* s)
-    {
-        wq_.emplace(s, s + std::strlen(s));
-        start_write();
-
-        return *this;
-    }
+    { return push_write(s, s + std::strlen(s)); }
 
     this_type&
     operator<<(const std::string& s)
-    {
-        wq_.emplace(s.begin(), s.end());
-        start_write();
-
-        return *this;
-    }
+    { return push_write(s.begin(), s.end()); }
 
     this_type&
     operator<<(std::string&& s)
     {
-        wq_.emplace(
-            std::make_move_iterator(s.begin()),
-            std::make_move_iterator(s.end())
-        );
-        start_write();
-
-        return *this;
+        return
+            push_write(
+                std::make_move_iterator(s.begin()),
+                std::make_move_iterator(s.end())
+            );
     }
 
     this_type&
@@ -141,12 +152,7 @@ public:
 
     this_type&
     operator<<(buffer&& b)
-    {
-        wq_.emplace(std::move(b));
-        start_write();
-
-        return *this;
-    }
+    { return push_write(std::move(b)); }
 
     this_type&
     operator>>(buffer& b)
@@ -158,6 +164,26 @@ public:
     }
 
 protected:
+    template <typename Iterator>
+    this_type& push_write(Iterator b, Iterator e)
+    {
+        if (!closing_) {
+            wq_.emplace(b, e);
+        }
+
+        return *this;
+    }
+
+    template <typename T>
+    this_type& push_write(T&& t)
+    {
+        if (!closing_) {
+            wq_.emplace(std::move(t));
+        }
+
+        return *this;
+    }
+
     bool handle_error(const error_code& e)
     {
         if (!e) {
@@ -184,8 +210,12 @@ protected:
 
     void start_write()
     {
-        io_ |= WRITE;
-        io_.start();
+        if (wq_.empty() && closing_) {
+            close_cv_.notify();
+        } else {
+            io_ |= WRITE;
+            io_.start();
+        }
     }
 
     /// CRTP interface
@@ -238,8 +268,13 @@ private:
     void handle_write()
     {
         if (wq_.empty()) {
-            io_ ^= WRITE;
-            handler(tags::on_drain)(derived());
+            if (closing_) {
+                close_cv_.notify();
+            } else {
+                io_ ^= WRITE;
+                handler(tags::on_drain)(derived());
+            }
+
             return;
         }
 
@@ -272,10 +307,13 @@ private:
     int fh_;
     bool no_eof_;
     io io_;
+    bool closing_;
+    bool closed_;
     callbacks callbacks_;
     queue_type wq_;
     buffer rbuf_;
     std::size_t read_size_ = 1024 * 1024;
+    cond_var close_cv_;
 };
 
 } // namespace nx
