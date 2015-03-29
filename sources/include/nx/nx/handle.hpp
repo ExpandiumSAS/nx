@@ -49,13 +49,10 @@ public:
     using ptr_type = std::shared_ptr<Derived>;
 
     handle(int fh) noexcept
-    : fh_(fh)
+    : fh_(fh),
+    no_eof_(false),
+    io_(fh)
     {
-        handle_error(
-            "setting non-blocking I/O",
-            fcntl(fh_, F_SETFL, fcntl(fh_, F_GETFL, 0) | O_NONBLOCK)
-        );
-
         io_ = [&](int events) {
             if (events & ERROR) {
                 handle_error("read/write error", errno);
@@ -76,6 +73,14 @@ public:
 
     virtual ~handle()
     {}
+
+    void set_nonblocking()
+    {
+        handle_error(
+            "setting non-blocking I/O",
+            fcntl(fh_, F_SETFL, fcntl(fh_, F_GETFL, 0) | O_NONBLOCK)
+        );
+    }
 
     int fh() const
     { return fh_; }
@@ -126,10 +131,28 @@ public:
     }
 
     this_type&
+    operator>>(std::string& s)
+    {
+        s.insert(s.end(), rbuf_.begin(), rbuf_.end());
+        rbuf_.clear();
+
+        return *this;
+    }
+
+    this_type&
     operator<<(buffer&& b)
     {
         wq_.emplace(std::move(b));
         start_write();
+
+        return *this;
+    }
+
+    this_type&
+    operator>>(buffer& b)
+    {
+        b.insert(b.end(), rbuf_.begin(), rbuf_.end());
+        rbuf_.clear();
 
         return *this;
     }
@@ -152,8 +175,9 @@ protected:
     bool handle_error(const char* what, int status)
     { return handle_error(error_code(what, status)); }
 
-    void start_read()
+    void start_read(bool no_eof = false)
     {
+        no_eof_ = no_eof;
         io_ |= READ;
         io_.start();
     }
@@ -183,12 +207,16 @@ private:
             ioctl(fh_, FIONREAD, &available)
         );
 
-        std::size_t cur_size = rbuf_.size();
-        rbuf_.resize(cur_size + (std::size_t) available);
+        ssize_t nread = 0;
 
-        void* buf = &(rbuf_.data()[cur_size]);
+        if (available > 0) {
+            std::size_t cur_size = rbuf_.size();
+            rbuf_.resize(cur_size + (std::size_t) available);
 
-        ssize_t nread = read(fh_, buf, (std::size_t) available);
+            void* buf = &(rbuf_.data()[cur_size]);
+
+            nread = read(fh_, buf, (std::size_t) available);
+        }
 
         if (nread < 0) {
             handle_error("read error", nread);
@@ -196,8 +224,12 @@ private:
         }
 
         if (nread == 0) {
-            io_.stop();
-            handler(tags::on_eof)(derived());
+            if (!no_eof_) {
+                io_.stop();
+                handler(tags::on_eof)(derived());
+            } else {
+                handler(tags::on_read)(derived(), rbuf_);
+            }
         } else {
             handler(tags::on_read)(derived(), rbuf_);
         }
@@ -238,10 +270,11 @@ private:
     using queue_type = std::queue<buffer>;
 
     int fh_;
+    bool no_eof_;
+    io io_;
     callbacks callbacks_;
     queue_type wq_;
     buffer rbuf_;
-    io io_;
     std::size_t read_size_ = 1024 * 1024;
 };
 

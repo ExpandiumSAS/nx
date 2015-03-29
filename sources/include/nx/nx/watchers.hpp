@@ -12,9 +12,9 @@ public:
     using base_type = watcher_base<io, ev_io>;
     using base_type::operator=;
 
-    io()
+    io(int fd)
     : base_type()
-    {}
+    { set([&](){ ev_io_set(ptr(), fd, 0); }); }
 
     virtual void start() noexcept
     { async() << [&](evloop el) { ev_io_start(el, ptr()); }; }
@@ -35,7 +35,7 @@ public:
     { return (*this)(w().fd, w().events | events); }
 
     io& operator^=(int events) noexcept
-    { return (*this)(w().fd, w().events & !events); }
+    { return (*this)(w().fd, w().events & ~events); }
 
     void start(int fd, int events) noexcept
     {

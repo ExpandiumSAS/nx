@@ -6,6 +6,10 @@
 #include <sys/socket.h>
 
 #include <functional>
+#include <memory>
+#include <unordered_map>
+#include <utility>
+#include <tuple>
 
 #include <nx/handle.hpp>
 #include <nx/endpoint.hpp>
@@ -35,7 +39,7 @@ public:
         Callbacks...
     >;
     using this_type = tcp_base<Derived, Callbacks...>;
-    using accept_cb = std::function<void(Derived&& t)>;
+    using accept_cb = std::function<void(Derived& t)>;
     using connect_cb = std::function<void(Derived& t)>;
     using read_cb = typename callback_signature<
         tags::on_read_tag,
@@ -54,6 +58,7 @@ public:
 
     void connect(const endpoint& to, connect_cb cb)
     {
+        base_type::set_nonblocking();
         remote_ = to;
         local_ = to;
         base_type::handler(tags::on_connect) = cb;
@@ -97,22 +102,33 @@ public:
         );
 
         if (!error) {
+            base_type::set_nonblocking();
+
             base_type::handler(tags::on_read) = [&](Derived& h, buffer& b) {
                 // New connection
-                std::cout << "new connection" << std::endl;
                 endpoint r = local_;
                 uint32_t size;
 
                 int fd = accept(base_type::fh(), r, &size);
 
-                if (!base_type::handle_error("accept error", fd)) {
-                    Derived client(fd, local_, r);
+                if (fd == -1) {
+                    base_type::handle_error("accept error", fd);
+                } else {
+                    auto p = clients_.emplace(
+                        std::piecewise_construct,
+                        std::forward_as_tuple(r.str()),
+                        std::forward_as_tuple(fd, local_, r)
+                    );
+
+                    auto& client = p.first->second;
 
                     client.handler(tags::on_read) = read_cb_;
                     client.start_read();
-                    accept_cb_(std::move(client));
+                    accept_cb_(client);
                 }
             };
+
+            base_type::start_read(true);
         }
 
         return local_;
@@ -125,10 +141,13 @@ public:
     { return remote_; }
 
 private:
+    using client_map = std::unordered_map<std::string, Derived>;
+
     endpoint local_;
     endpoint remote_;
     accept_cb accept_cb_;
     read_cb read_cb_;
+    client_map clients_;
 };
 
 class tcp : public tcp_base<tcp>
