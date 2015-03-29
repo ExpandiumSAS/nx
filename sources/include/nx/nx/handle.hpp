@@ -55,6 +55,21 @@ public:
             "setting non-blocking I/O",
             fcntl(fh_, F_SETFL, fcntl(fh_, F_GETFL, 0) | O_NONBLOCK)
         );
+
+        io_ = [&](int events) {
+            if (events & ERROR) {
+                handle_error("read/write error", errno);
+                return;
+            }
+
+            if (events & READ) {
+                handle_read();
+            }
+
+            if (events & WRITE) {
+                handle_write();
+            }
+        };
     }
 
     handle(const this_type& other) = delete;
@@ -140,24 +155,14 @@ protected:
     void start_read()
     {
         io_ |= READ;
-        io_ = [&](int events) {
-            if (events & ERROR) {
-                handle_error("read/write error", errno);
-                return;
-            }
-
-            if (events & READ) {
-                handle_read();
-            }
-
-            if (events & WRITE) {
-                handle_write();
-            }
-        };
+        io_.start();
     }
 
     void start_write()
-    { io_ |= WRITE; }
+    {
+        io_ |= WRITE;
+        io_.start();
+    }
 
     /// CRTP interface
     Derived* derived_this()

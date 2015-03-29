@@ -10,15 +10,23 @@ namespace nx {
 
 typedef sockaddr ip_addr;
 typedef ip_addr* ip_addr_ptr;
+typedef const ip_addr* const_ip_addr_ptr;
 typedef sockaddr_in ip4_addr;
 typedef ip4_addr* ip4_addr_ptr;
+typedef const ip4_addr* const_ip4_addr_ptr;
 typedef sockaddr_in6 ip6_addr;
 typedef ip6_addr* ip6_addr_ptr;
+typedef const ip6_addr* const_ip6_addr_ptr;
 
 inline
 ip_addr_ptr
 ip4_addr_cast(ip4_addr_ptr p)
 { return reinterpret_cast<ip_addr_ptr>(p); }
+
+inline
+const_ip_addr_ptr
+ip4_addr_cast(const_ip4_addr_ptr p)
+{ return reinterpret_cast<const_ip_addr_ptr>(p); }
 
 inline
 ip_addr&
@@ -36,6 +44,11 @@ ip4_addr_cast(ip_addr_ptr p)
 { return reinterpret_cast<ip4_addr_ptr>(p); }
 
 inline
+const_ip4_addr_ptr
+ip4_addr_cast(const_ip_addr_ptr p)
+{ return reinterpret_cast<const_ip4_addr_ptr>(p); }
+
+inline
 ip4_addr&
 ip4_addr_cast(ip_addr& p)
 { return reinterpret_cast<ip4_addr&>(p); }
@@ -51,6 +64,11 @@ ip6_addr_cast(ip6_addr_ptr p)
 { return reinterpret_cast<ip_addr_ptr>(p); }
 
 inline
+const_ip_addr_ptr
+ip6_addr_cast(const_ip6_addr_ptr p)
+{ return reinterpret_cast<const_ip_addr_ptr>(p); }
+
+inline
 ip_addr&
 ip6_addr_cast(ip6_addr& p)
 { return reinterpret_cast<ip_addr&>(p); }
@@ -64,6 +82,11 @@ inline
 ip6_addr_ptr
 ip6_addr_cast(ip_addr_ptr p)
 { return reinterpret_cast<ip6_addr_ptr>(p); }
+
+inline
+const_ip6_addr_ptr
+ip6_addr_cast(const_ip_addr_ptr p)
+{ return reinterpret_cast<const_ip6_addr_ptr>(p); }
 
 inline
 ip6_addr&

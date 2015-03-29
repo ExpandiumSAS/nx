@@ -15,10 +15,11 @@ class NX_API endpoint
 {
 public:
     endpoint();
-    endpoint(const std::string& ip, uint16_t port = 0);
-    endpoint(const ip_addr& addr);
-    endpoint(const ip4_addr& addr);
-    endpoint(const ip6_addr& addr);
+    explicit endpoint(const char* ip, uint16_t port = 0);
+    explicit endpoint(const std::string& ip, uint16_t port = 0);
+    explicit endpoint(const ip_addr& addr);
+    explicit endpoint(const ip4_addr& addr);
+    explicit endpoint(const ip6_addr& addr);
     endpoint(const endpoint& other);
     endpoint(endpoint&& other);
 
@@ -28,8 +29,10 @@ public:
     endpoint& operator=(const endpoint& other);
     endpoint& operator=(endpoint&& other);
 
-    const std::string& ip() const;
-    const char* ip_c_str() const;
+    void set_from_local(int fh);
+    void set_from_remote(int fh);
+
+    std::string ip() const;
     uint16_t port() const;
 
     std::string str() const;
@@ -38,16 +41,7 @@ public:
     operator ip_addr_ptr() const;
     operator std::string() const;
 
-    void update();
-
 private:
-    void init();
-    void init(const ip_addr& addr);
-    void init(const ip4_addr& addr);
-    void init(const ip6_addr& addr);
-
-    std::string ip_;
-    uint16_t port_;
     ip_addr addr_;
 };
 

@@ -60,8 +60,8 @@ public:
 
         base_type::handler(tags::on_drain) = [&](Derived& h) {
             // Socket is connected
-            uint32_t size = local_.size();
-            getsockname(base_type::fh(), local_, &size);
+            local_.set_from_local(base_type::fh());
+            remote_.set_from_remote(base_type::fh());
             base_type::handler(tags::on_connect)(base_type::derived());
             base_type::handler(tags::on_connect) = nullptr;
             base_type::start_read();
@@ -89,11 +89,7 @@ public:
             bind(base_type::fh(), local_, local_.size())
         );
 
-        uint32_t size = local_.size();
-        base_type::handle_error(
-            "getsockname",
-            getsockname(base_type::fh(), local_, &size)
-        );
+        local_.set_from_local(base_type::fh());
 
         error = error || base_type::handle_error(
             "listen error",
@@ -101,10 +97,9 @@ public:
         );
 
         if (!error) {
-            local_.update();
-
             base_type::handler(tags::on_read) = [&](Derived& h, buffer& b) {
                 // New connection
+                std::cout << "new connection" << std::endl;
                 endpoint r = local_;
                 uint32_t size;
 
