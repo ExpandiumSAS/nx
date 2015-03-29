@@ -19,7 +19,6 @@ public:
     using this_type = watcher_base<Derived, Watcher>;
     using watcher_event_cb = std::function<void(Derived&, int)>;
     using event_cb = std::function<void(int)>;
-    using set_cb = std::function<void()>;
 
     struct on_watcher_events {};
     struct on_events {};
@@ -46,34 +45,32 @@ public:
 
     this_type& operator=(const this_type& other) = delete;
 
-    this_type& operator=(watcher_event_cb cb)
+    Derived& operator=(watcher_event_cb&& cb)
     {
-        watcher_event_cb_ = cb;
+        watcher_event_cb_ = std::move(cb);
 
-        ev_set_cb(
-            ptr(),
+        set_cb(
             [](auto l, watcher_type* w, int revents) {
                 auto& me = watcher_cast<this_type>(w);
                 callback_access::call<on_watcher_events>(me, revents);
             }
         );
 
-        return *this;
+        return derived();
     }
 
-    this_type& operator=(event_cb cb)
+    Derived& operator=(event_cb&& cb)
     {
-        event_cb_ = cb;
+        event_cb_ = std::move(cb);
 
-        ev_set_cb(
-            ptr(),
+        set_cb(
             [](auto l, watcher_type* w, int revents) {
                 auto& me = watcher_cast<this_type>(w);
                 callback_access::call<on_events>(me, revents);
             }
         );
 
-        return *this;
+        return derived();
     }
 
     bool is_active() const noexcept
@@ -95,7 +92,15 @@ public:
     { return &w_; }
 
 protected:
-    void set(set_cb cb) noexcept
+    template <typename Callback>
+    Derived& set_cb(Callback&& cb)
+    {
+        async() << [&]() { ev_set_cb(ptr(), cb); };
+
+        return derived();
+    }
+
+    void set(void_cb cb) noexcept
     {
         bool active = is_active();
 

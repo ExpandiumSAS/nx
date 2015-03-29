@@ -15,7 +15,7 @@ to_ip4_addr(const std::string& ip, uint16_t port, ip4_addr* addr)
     addr->sin_family = AF_INET;
     addr->sin_port = htons(port);
 
-    return inet_pton(AF_INET, ip.c_str(), &(addr->sin_addr.s_addr)) == 0;
+    return inet_pton(AF_INET, ip.c_str(), &(addr->sin_addr.s_addr)) == 1;
 }
 
 bool
@@ -23,7 +23,7 @@ to_ip4_name(const ip4_addr* addr, std::string& ip)
 {
     char dest[16];
 
-    bool ok = inet_ntop(AF_INET, &addr->sin_addr, dest, 16) == 0;
+    bool ok = inet_ntop(AF_INET, &addr->sin_addr, dest, 16) != nullptr;
 
     ip = dest;
 
@@ -38,7 +38,7 @@ to_ip6_addr(const std::string& ip, uint16_t port, ip6_addr* addr)
     addr->sin6_family = AF_INET6;
     addr->sin6_port = htons(port);
 
-    return inet_pton(AF_INET6, ip.c_str(), &addr->sin6_addr) == 0;
+    return inet_pton(AF_INET6, ip.c_str(), &addr->sin6_addr) == 1;
 }
 
 bool
@@ -46,7 +46,7 @@ to_ip6_name(const ip6_addr* addr, std::string& ip)
 {
     char dest[46];
 
-    bool ok = inet_ntop(AF_INET6, &addr->sin6_addr, dest, 46) == 0;
+    bool ok = inet_ntop(AF_INET6, &addr->sin6_addr, dest, 46) != nullptr;
 
     ip = dest;
 
@@ -88,7 +88,7 @@ endpoint::init()
 {
     std::memset((void*) &addr_, 0, sizeof(addr_));
 
-    if (to_ip4_addr(ip_.c_str(), port_, ip4_addr_cast(&addr_)) != 0) {
+    if (!to_ip4_addr(ip_.c_str(), port_, ip4_addr_cast(&addr_))) {
         to_ip6_addr(ip_.c_str(), port_, ip6_addr_cast(&addr_));
     }
 }
@@ -108,7 +108,7 @@ endpoint::init(const ip_addr& addr)
 void
 endpoint::init(const ip4_addr& addr)
 {
-    if (to_ip4_name(&addr, ip_) == 0) {
+    if (to_ip4_name(&addr, ip_)) {
         port_ = ntohs(addr.sin_port);
     }
 }
@@ -174,6 +174,20 @@ const char*
 endpoint::ip_c_str() const
 { return ip_.c_str(); }
 
+std::size_t
+endpoint::size() const
+{
+    std::size_t s = 0;
+
+    if (addr_.sa_family == AF_INET) {
+        s = sizeof(struct sockaddr_in);
+    } else if (addr_.sa_family == AF_INET6) {
+        s = sizeof(struct sockaddr_in6);
+    }
+
+    return s;
+}
+
 uint16_t
 endpoint::port() const
 { return port_; }
@@ -193,5 +207,9 @@ endpoint::operator ip_addr_ptr() const
 
 endpoint::operator std::string() const
 { return str(); }
+
+void
+endpoint::update()
+{ init(addr_); }
 
 } // namespace nx

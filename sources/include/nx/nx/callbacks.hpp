@@ -146,6 +146,15 @@ struct callback_element
     >::type;
 };
 
+template <typename Tag, typename Class>
+struct callback_signature
+{
+    using type = typename callback_element<
+        Tag,
+        typename Class::callbacks
+    >::type::type;
+};
+
 } // namespace nx
 
 #endif // __NX_CALLBACKS_H__

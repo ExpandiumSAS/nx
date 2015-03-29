@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
+#include <iostream>
 #include <type_traits>
 #include <memory>
 #include <queue>
@@ -15,6 +16,7 @@
 #include <nx/callbacks.hpp>
 #include <nx/buffer.hpp>
 #include <nx/watchers.hpp>
+#include <nx/error_code.hpp>
 
 namespace nx {
 
@@ -38,7 +40,7 @@ class handle
 public:
     using this_type = handle<Derived, Callbacks...>;
     using callbacks = nx::callbacks<
-        callback<tags::on_error_tag, Derived&, const char*>,
+        callback<tags::on_error_tag, Derived&, const error_code&>,
         callback<tags::on_read_tag, Derived&, buffer&>,
         callback<tags::on_eof_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
@@ -49,13 +51,19 @@ public:
     handle(int fh) noexcept
     : fh_(fh)
     {
-        fcntl(fh_, F_SETFL, fcntl(fh_, F_GETFL, 0) | O_NONBLOCK);
+        handle_error(
+            "setting non-blocking I/O",
+            fcntl(fh_, F_SETFL, fcntl(fh_, F_GETFL, 0) | O_NONBLOCK)
+        );
     }
 
     handle(const this_type& other) = delete;
 
     virtual ~handle()
     {}
+
+    int fh() const
+    { return fh_; }
 
     template <
         typename Tag,
@@ -111,12 +119,30 @@ public:
         return *this;
     }
 
-private:
+protected:
+    bool handle_error(const error_code& e)
+    {
+        if (!e) {
+            return false;
+        }
+
+        if (!handler(tags::on_error)(derived(), e)) {
+            // Unhandled error
+            std::cerr << "unhandled error: " << e << std::endl;
+        }
+
+        return true;
+    }
+
+    bool handle_error(const char* what, int status)
+    { return handle_error(error_code(what, status)); }
+
     void start_read()
     {
-        io_(READ) = [&](int events) {
+        io_ |= READ;
+        io_ = [&](int events) {
             if (events & ERROR) {
-                perror("read/write error");
+                handle_error("read/write error", errno);
                 return;
             }
 
@@ -131,13 +157,26 @@ private:
     }
 
     void start_write()
-    { io_(READ | WRITE); }
+    { io_ |= WRITE; }
 
+    /// CRTP interface
+    Derived* derived_this()
+    { return static_cast<Derived*>(this); }
+
+    Derived& derived()
+    { return *static_cast<Derived* const>(this); }
+    Derived const& derived() const
+    { return *static_cast<Derived const*>(this); }
+
+private:
     void handle_read()
     {
         int available;
 
-        ioctl(fh_, FIONREAD, &available);
+        handle_error(
+            "error reading available bytes",
+            ioctl(fh_, FIONREAD, &available)
+        );
 
         std::size_t cur_size = rbuf_.size();
         rbuf_.resize(cur_size + (std::size_t) available);
@@ -147,7 +186,7 @@ private:
         ssize_t nread = read(fh_, buf, (std::size_t) available);
 
         if (nread < 0) {
-            perror("read error");
+            handle_error("read error", nread);
             return;
         }
 
@@ -162,7 +201,8 @@ private:
     void handle_write()
     {
         if (wq_.empty()) {
-            io_(READ);
+            io_ ^= WRITE;
+            handler(tags::on_drain)(derived());
             return;
         }
 
@@ -174,7 +214,7 @@ private:
 
         if (nwritten < 0) {
             if (errno != EAGAIN && errno != EINTR && errno != EWOULDBLOCK) {
-                perror("write error");
+                handle_error("write error", errno);
             }
 
             return;
@@ -188,15 +228,6 @@ private:
             b.erase(b.begin(), b.begin() + wsize);
         }
     }
-
-    /// CRTP interface
-    Derived* derived_this()
-    { return static_cast<Derived*>(this); }
-
-    Derived& derived()
-    { return *static_cast<Derived* const>(this); }
-    Derived const& derived() const
-    { return *static_cast<Derived const*>(this); }
 
 private:
     using queue_type = std::queue<buffer>;

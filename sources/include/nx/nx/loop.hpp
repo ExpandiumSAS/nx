@@ -2,9 +2,10 @@
 #define __NX_LOOP_H__
 
 #include <thread>
-#include <mutex>
-#include <condition_variable>
+#include <atomic>
 #include <functional>
+
+#include <moodycamel/concurrentqueue.hpp>
 
 #include <nx/ev.hpp>
 #include <nx/config.h>
@@ -14,17 +15,18 @@ namespace nx {
 using evloop = struct ev_loop*;
 using timestamp = ev_tstamp;
 
+using loop_cb = std::function<void(evloop)>;
+using void_cb = std::function<void()>;
+
 class NX_API loop
 {
 public:
-    using loop_cb = std::function<void(evloop)>;
-
     static loop& get();
 
-    void start();
-    void stop();
-
-    void operator()(loop_cb cb);
+    loop& operator()(loop_cb&& cb);
+    loop& operator()(void_cb&& cb);
+    loop& operator<<(loop_cb&& cb);
+    loop& operator<<(void_cb&& cb);
 
 private:
     loop();
@@ -35,15 +37,24 @@ private:
     void operator=(const loop&) = delete;
     void operator=(loop&&) = delete;
 
-    void lock();
-    void unlock();
+    void start();
+    void stop();
 
-    struct ev_loop* l_;
-    std::recursive_mutex m_;
-    std::condition_variable cv_;
-    std::thread t_;
+    loop& enqueue(loop_cb&& cb);
+
+private:
+    using queue_type = moodycamel::ConcurrentQueue<loop_cb>;
+
+    evloop l_;
     struct ev_async async_w_;
+    std::atomic_bool stop_{false};
+    std::thread t_;
+    queue_type q_;
 };
+
+NX_API
+loop&
+async();
 
 } // namespace nx
 

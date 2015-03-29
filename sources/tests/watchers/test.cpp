@@ -11,8 +11,6 @@ BOOST_AUTO_TEST_CASE(timer)
     nx::timer t;
     nx::cond_var cv;
 
-    nx::loop::get().start();
-
     bool got_timer = false;
 
     t(.25) = [&](nx::timer& t, int events) {

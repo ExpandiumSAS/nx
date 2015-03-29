@@ -11,48 +11,21 @@ loop::get()
     return l;
 }
 
-void
-loop::start()
-{
-    t_ = std::thread(
-        [this]() {
-            ev_loop_fork(l_);
+loop&
+loop::operator()(loop_cb&& cb)
+{ return enqueue(std::move(cb)); }
 
-            lock();
-            ev_run(l_, 0);
-            unlock();
-        }
-    );
-}
+loop&
+loop::operator()(void_cb&& cb)
+{ return enqueue([cb = std::move(cb)](evloop l) { cb(); }); }
 
-void
-loop::stop()
-{
-    {
-        std::lock_guard<std::recursive_mutex> lock(m_);
-        ev_break(l_, EVBREAK_ALL);
-        ev_async_send(l_, &async_w_);
-        ev_async_stop(l_, &async_w_);
-    }
+loop&
+loop::operator<<(loop_cb&& cb)
+{ return enqueue(std::move(cb)); }
 
-    t_.join();
-}
-
-void
-loop::operator()(loop_cb cb)
-{
-    std::lock_guard<std::recursive_mutex> lock(m_);
-    cb(l_);
-    ev_async_send(l_, &async_w_);
-}
-
-void
-loop::lock()
-{ m_.lock(); }
-
-void
-loop::unlock()
-{ m_.unlock(); }
+loop&
+loop::operator<<(void_cb&& cb)
+{ return enqueue([cb = std::move(cb)](evloop l) { cb(); }); }
 
 loop::loop()
 : l_(ev_default_loop())
@@ -63,20 +36,7 @@ loop::loop()
     );
 
     ev_async_start(l_, &async_w_);
-
-    ev_set_userdata(l_, static_cast<void*>(this));
-
-    ev_set_loop_release_cb(
-        l_,
-        [](evloop el) {
-            auto& l = *static_cast<loop*>(ev_userdata(el));
-            l.unlock();
-        },
-        [](evloop el) {
-            auto& l = *static_cast<loop*>(ev_userdata(el));
-            l.lock();
-        }
-    );
+    start();
 }
 
 loop::~loop()
@@ -84,5 +44,56 @@ loop::~loop()
     stop();
     ev_loop_destroy(l_);
 }
+
+void
+loop::start()
+{
+    t_ = std::thread(
+        [this]() {
+            ev_loop_fork(l_);
+
+            while (!stop_.load()) {
+                loop_cb cb;
+
+                while (q_.try_dequeue(cb)) {
+                    cb(l_);
+                }
+
+                ev_run(l_, EVRUN_ONCE);
+            }
+        }
+    );
+}
+
+void
+loop::stop()
+{
+    stop_ = true;
+
+    enqueue(
+        [&](evloop l) {
+            ev_break(l, EVBREAK_ALL);
+            ev_async_stop(l, &async_w_);
+        }
+    );
+
+    t_.join();
+}
+
+loop&
+loop::enqueue(loop_cb&& cb)
+{
+    if (q_.enqueue(cb)) {
+        ev_async_send(l_, &async_w_);
+    } else {
+        std::cerr << "failed to queue cb" << std::endl;
+    }
+
+    return *this;
+}
+
+loop&
+async()
+{ return loop::get(); }
 
 } // namespace nx

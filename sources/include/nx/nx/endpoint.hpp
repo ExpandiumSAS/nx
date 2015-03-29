@@ -33,9 +33,12 @@ public:
     uint16_t port() const;
 
     std::string str() const;
+    std::size_t size() const;
 
     operator ip_addr_ptr() const;
     operator std::string() const;
+
+    void update();
 
 private:
     void init();
