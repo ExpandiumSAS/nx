@@ -25,11 +25,13 @@ namespace tags {
 
 struct on_error_tag : callback_tag {};
 struct on_read_tag : callback_tag {};
+struct on_readable_tag : callback_tag {};
 struct on_drain_tag : callback_tag {};
 struct on_eof_tag : callback_tag {};
 
 const on_error_tag on_error = {};
 const on_read_tag on_read = {};
+const on_readable_tag on_readable = {};
 const on_drain_tag on_drain = {};
 const on_eof_tag on_eof = {};
 
@@ -43,6 +45,7 @@ public:
     using callbacks = nx::callbacks<
         callback<tags::on_error_tag, Derived&, const error_code&>,
         callback<tags::on_read_tag, Derived&, buffer&>,
+        callback<tags::on_readable_tag, Derived&>,
         callback<tags::on_eof_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
         Callbacks...
@@ -51,50 +54,52 @@ public:
 
     handle(int fh) noexcept
     : fh_(fh),
-    no_eof_(false),
+    notify_only_(false),
     io_(fh),
     closing_(false),
     closed_(false)
-    {
-        io_ = [&](int events) {
-            if (events & ERROR) {
-                handle_error("read/write error", errno);
-                return;
-            }
+    { set_io_cb(); }
 
-            if (events & READ) {
-                handle_read();
-            }
-
-            if (events & WRITE) {
-                handle_write();
-            }
-        };
-    }
+    handle(this_type&& other) noexcept
+    { *this = std::move(other); }
 
     handle(const this_type& other) = delete;
+    this_type& operator=(const this_type& other) = delete;
 
     virtual ~handle()
     { close(); }
 
-    void close()
+    this_type& operator=(this_type&& other) noexcept
     {
-        if (closed_) {
+        fh_ = other.fh_;
+        notify_only_ = other.notify_only_;
+        io_ = std::move(other.io_);
+        set_io_cb();
+        closing_ = other.closing_;
+        closed_ = other.closed_;
+        callbacks callbacks_;
+        wq_ = std::move(other.wq_);
+        rbuf_ = std::move(other.rbuf_);
+        read_size_ = other.read_size_;
+        close_cv_ = std::move(other.close_cv_);
+
+        other.fh_ = -1;
+        other.closed_ = true;
+
+        return *this;
+    }
+
+    void push_close()
+    {
+        if (closing_) {
             return;
         }
 
-        io_ ^= READ;
         closing_ = true;
+
+        io_ ^= READ;
+
         start_write();
-        close_cv_.wait();
-
-        handle_error(
-            "shutdown",
-            shutdown(fh_, SHUT_WR)
-        );
-
-        io_.stop();
-        closed_ = true;
     }
 
     void set_nonblocking()
@@ -186,6 +191,7 @@ protected:
     {
         if (!closing_) {
             wq_.emplace(b, e);
+            start_write();
         }
 
         return *this;
@@ -196,14 +202,15 @@ protected:
     {
         if (!closing_) {
             wq_.emplace(std::move(t));
+            start_write();
         }
 
         return *this;
     }
 
-    void start_read(bool no_eof = false)
+    void start_read(bool notify_only = false)
     {
-        no_eof_ = no_eof;
+        notify_only_ = notify_only;
         io_ |= READ;
         io_.start();
     }
@@ -211,7 +218,7 @@ protected:
     void start_write()
     {
         if (wq_.empty() && closing_) {
-            close_cv_.notify();
+            close();
         } else {
             io_ |= WRITE;
             io_.start();
@@ -228,9 +235,33 @@ protected:
     { return *static_cast<Derived const*>(this); }
 
 private:
+    void set_io_cb()
+    {
+        io_ = [&](int events) {
+            if (events & ERROR) {
+                handle_error("read/write error", errno);
+                return;
+            }
+
+            if (events & READ) {
+                handle_read();
+            }
+
+            if (events & WRITE) {
+                handle_write();
+            }
+        };
+    }
+
     void handle_read()
     {
-        int available;
+        if (notify_only_) {
+            handler(tags::on_readable)(derived());
+
+            return;
+        }
+
+        int available = 0;
 
         handle_error(
             "error reading available bytes",
@@ -254,12 +285,8 @@ private:
         }
 
         if (nread == 0) {
-            if (!no_eof_) {
-                io_.stop();
-                handler(tags::on_eof)(derived());
-            } else {
-                handler(tags::on_read)(derived(), rbuf_);
-            }
+            io_.stop();
+            handler(tags::on_eof)(derived());
         } else {
             handler(tags::on_read)(derived(), rbuf_);
         }
@@ -269,7 +296,7 @@ private:
     {
         if (wq_.empty()) {
             if (closing_) {
-                close_cv_.notify();
+                close();
             } else {
                 io_ ^= WRITE;
                 handler(tags::on_drain)(derived());
@@ -301,11 +328,26 @@ private:
         }
     }
 
+    void close()
+    {
+        if (closed_) {
+            return;
+        }
+
+        handle_error(
+            "shutdown",
+            shutdown(fh_, SHUT_WR)
+        );
+
+        io_.stop();
+        closed_ = true;
+    }
+
 private:
     using queue_type = std::queue<buffer>;
 
     int fh_;
-    bool no_eof_;
+    bool notify_only_;
     io io_;
     bool closing_;
     bool closed_;

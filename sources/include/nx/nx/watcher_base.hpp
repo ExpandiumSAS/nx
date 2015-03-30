@@ -32,18 +32,28 @@ public:
         w_.data = static_cast<void*>(this);
     }
 
+    watcher_base(this_type&& other)
+    { *this = std::move(other); }
+
     watcher_base(const this_type& other) = delete;
+    this_type& operator=(const this_type& other) = delete;
 
     virtual ~watcher_base()
     { stop(); }
+
+    this_type& operator=(this_type&& other)
+    {
+        watcher_event_cb_ = std::move(other.watcher_event_cb_);
+        event_cb_ = std::move(other.event_cb_);
+        std::memcpy((void*) &w_, (const void*) &other.w_, sizeof(watcher_type));
+        w_.data = static_cast<void*>(this);
+    }
 
     virtual void start() noexcept
     {}
 
     virtual void stop() noexcept
     {}
-
-    this_type& operator=(const this_type& other) = delete;
 
     Derived& operator=(watcher_event_cb&& cb)
     {

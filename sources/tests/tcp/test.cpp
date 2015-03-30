@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     nx::timer deadline;
     nx::cond_var cv;
 
-    deadline(1.0) = [&](nx::timer& t, int events) {
+    deadline(5.0) = [&](nx::timer& t, int events) {
         t.stop();
         cv.notify();
     };
@@ -42,6 +42,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
             std::reverse(str.begin(), str.end());
 
             t << str;
+            t.push_close();
         }
     );
 

@@ -48,6 +48,7 @@ public:
     >::type;
 
     struct connected_tag {};
+    struct connection_tag {};
 
     tcp_base()
     : base_type(socket(PF_INET, SOCK_STREAM, 0))
@@ -58,6 +59,27 @@ public:
     local_(local),
     remote_(remote)
     {}
+
+    tcp_base(this_type&& other)
+    { *this = std::move(other); }
+
+    virtual ~tcp_base()
+    {}
+
+    tcp_base(const this_type& other) = delete;
+    this_type& operator=(const this_type& other) = delete;
+
+    this_type& operator=(this_type&& other)
+    {
+        base_type::operator=(std::forward<base_type>(other));
+        local_ = std::move(other.local_);
+        remote_ = std::move(other.remote_);
+        accept_cb_ = std::move(other.accept_cb_);
+        read_cb_ = std::move(other.read_cb_);
+        clients_ = std::move(other.clients_);
+
+        return *this;
+    }
 
     void connect(const endpoint& to, connect_cb cb)
     {
@@ -81,8 +103,6 @@ public:
         }
     }
 
-
-
     const endpoint& serve(const endpoint& from, accept_cb acb, read_cb rcb)
     {
         local_ = from;
@@ -104,30 +124,9 @@ public:
         if (!error) {
             base_type::set_nonblocking();
 
-            base_type::handler(tags::on_read) = [&](Derived& h, buffer& b) {
+            base_type::handler(tags::on_readable) = [](Derived& h) {
                 // New connection
-                endpoint r = local_;
-                uint32_t size;
-
-                int fd = accept(base_type::fh(), r, &size);
-
-                if (fd == -1) {
-                    base_type::handle_error("accept error", fd);
-                } else {
-                    auto p = clients_.emplace(
-                        std::piecewise_construct,
-                        std::forward_as_tuple(r.str()),
-                        std::forward_as_tuple(
-                            std::make_unique<Derived>(fd, local_, r)
-                        )
-                    );
-
-                    auto& client = p.first->second;
-
-                    client->handler(tags::on_read) = read_cb_;
-                    client->start_read();
-                    accept_cb_(*client);
-                }
+                callback_access::call<connection_tag>(h);
             };
 
             base_type::start_read(true);
@@ -153,6 +152,32 @@ private:
         base_type::handler(tags::on_connect) = nullptr;
         base_type::start_read();
         base_type::handler(tags::on_drain) = nullptr;
+    }
+
+    void operator()(const connection_tag& t)
+    {
+        endpoint r = local_;
+        uint32_t size = 0;
+
+        int fd = accept(base_type::fh(), r, &size);
+
+        if (fd == -1) {
+            base_type::handle_error("accept error", fd);
+        } else {
+            auto p = clients_.emplace(
+                std::piecewise_construct,
+                std::forward_as_tuple(r.str()),
+                std::forward_as_tuple(
+                    std::make_unique<Derived>(fd, local_, r)
+                )
+            );
+
+            auto& client = p.first->second;
+
+            client->handler(tags::on_read) = read_cb_;
+            client->start_read();
+            accept_cb_(*client);
+        }
     }
 
 private:
