@@ -13,6 +13,7 @@
 
 #include <nx/handle.hpp>
 #include <nx/endpoint.hpp>
+#include <nx/callback_access.hpp>
 
 namespace nx {
 
@@ -46,6 +47,8 @@ public:
         base_type
     >::type;
 
+    struct connected_tag {};
+
     tcp_base()
     : base_type(socket(PF_INET, SOCK_STREAM, 0))
     {}
@@ -63,14 +66,9 @@ public:
         local_ = to;
         base_type::handler(tags::on_connect) = cb;
 
-        base_type::handler(tags::on_drain) = [&](Derived& h) {
+        base_type::handler(tags::on_drain) = [](Derived& h) {
             // Socket is connected
-            local_.set_from_local(base_type::fh());
-            remote_.set_from_remote(base_type::fh());
-            base_type::handler(tags::on_connect)(base_type::derived());
-            base_type::handler(tags::on_connect) = nullptr;
-            base_type::start_read();
-            base_type::handler(tags::on_drain) = nullptr;
+            callback_access::call<connected_tag>(h);
         };
 
         base_type::start_write();
@@ -82,6 +80,8 @@ public:
             return;
         }
     }
+
+
 
     const endpoint& serve(const endpoint& from, accept_cb acb, read_cb rcb)
     {
@@ -117,14 +117,16 @@ public:
                     auto p = clients_.emplace(
                         std::piecewise_construct,
                         std::forward_as_tuple(r.str()),
-                        std::forward_as_tuple(fd, local_, r)
+                        std::forward_as_tuple(
+                            std::make_unique<Derived>(fd, local_, r)
+                        )
                     );
 
                     auto& client = p.first->second;
 
-                    client.handler(tags::on_read) = read_cb_;
-                    client.start_read();
-                    accept_cb_(client);
+                    client->handler(tags::on_read) = read_cb_;
+                    client->start_read();
+                    accept_cb_(*client);
                 }
             };
 
@@ -141,7 +143,21 @@ public:
     { return remote_; }
 
 private:
-    using client_map = std::unordered_map<std::string, Derived>;
+    friend callback_access;
+
+    void operator()(const connected_tag& t)
+    {
+        local_.set_from_local(base_type::fh());
+        remote_.set_from_remote(base_type::fh());
+        base_type::handler(tags::on_connect)(base_type::derived());
+        base_type::handler(tags::on_connect) = nullptr;
+        base_type::start_read();
+        base_type::handler(tags::on_drain) = nullptr;
+    }
+
+private:
+    using client_ptr = std::unique_ptr<Derived>;
+    using client_map = std::unordered_map<std::string, client_ptr>;
 
     endpoint local_;
     endpoint remote_;

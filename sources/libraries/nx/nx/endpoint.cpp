@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <sstream>
+#include <stdexcept>
 
 #include <nx/endpoint.hpp>
 

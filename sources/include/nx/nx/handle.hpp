@@ -163,6 +163,23 @@ public:
         return *this;
     }
 
+    bool handle_error(const error_code& e)
+    {
+        if (!e) {
+            return false;
+        }
+
+        if (!handler(tags::on_error)(derived(), e)) {
+            // Unhandled error
+            std::cerr << "unhandled error: " << e << std::endl;
+        }
+
+        return true;
+    }
+
+    bool handle_error(const char* what, int status)
+    { return handle_error(error_code(what, status)); }
+
 protected:
     template <typename Iterator>
     this_type& push_write(Iterator b, Iterator e)
@@ -183,23 +200,6 @@ protected:
 
         return *this;
     }
-
-    bool handle_error(const error_code& e)
-    {
-        if (!e) {
-            return false;
-        }
-
-        if (!handler(tags::on_error)(derived(), e)) {
-            // Unhandled error
-            std::cerr << "unhandled error: " << e << std::endl;
-        }
-
-        return true;
-    }
-
-    bool handle_error(const char* what, int status)
-    { return handle_error(error_code(what, status)); }
 
     void start_read(bool no_eof = false)
     {
