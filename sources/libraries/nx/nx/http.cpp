@@ -1,7 +1,7 @@
-#include <hxx/http.hpp>
-#include <hxx/regexp/http.hpp>
+#include <nx/http.hpp>
+#include <nx/regexp/http.hpp>
 
-namespace hxx {
+namespace nx {
 
 http::http()
 : base_type(),
@@ -72,7 +72,7 @@ http::process_request()
     }
 
     *this << rep_.content();
-    stop();
+    push_close();
 }
 
 void
@@ -89,13 +89,13 @@ http::process_reply()
 
     // All data arrived, call upper handler
     reply_cb_(rep_, rbuf());
-    stop();
+    push_close();
 }
 
 void
 http::send_request()
 {
-    req_ << header("Host", peername().str());
+    req_ << header("Host", local().str());
     *this << req_.content();
 }
 
@@ -109,10 +109,10 @@ http::operator()(
     return
         base_type::serve(
             ep,
-            [cb](hxx::http& c) {
+            [cb](nx::http& c) {
                 c.request_cb_ = cb;
             },
-            [](hxx::http& t) {
+            [](nx::http& t) {
                 t.process_request();
             }
         );
@@ -140,5 +140,5 @@ http::operator()(
     );
 }
 
-} // namespace hxx
+} // namespace nx
 

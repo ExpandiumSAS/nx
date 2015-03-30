@@ -1,6 +1,6 @@
-#include <hxx/httpc.hpp>
+#include <nx/httpc.hpp>
 
-namespace hxx {
+namespace nx {
 
 client::client(const method& m, const endpoint& ep, done_cb cb)
 : req_(m),
@@ -95,4 +95,4 @@ httpc::operator()(const method& m, const endpoint& ep)
     return c;
 }
 
-} // namespace hxx
+} // namespace nx

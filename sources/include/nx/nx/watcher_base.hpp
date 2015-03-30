@@ -47,6 +47,8 @@ public:
         event_cb_ = std::move(other.event_cb_);
         std::memcpy((void*) &w_, (const void*) &other.w_, sizeof(watcher_type));
         w_.data = static_cast<void*>(this);
+
+        return *this;
     }
 
     virtual void start() noexcept

@@ -1,6 +1,6 @@
-#include <hxx/json.hpp>
+#include <nx/json.hpp>
 
-namespace hxx {
+namespace nx {
 
 json_types&
 json_types::get()
@@ -30,4 +30,4 @@ void
 json::operator()(std::ostream& os) const
 { os << v_; }
 
-} // namesapce hxx
+} // namesapce nx

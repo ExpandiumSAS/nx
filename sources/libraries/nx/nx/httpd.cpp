@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include <hxx/httpd.hpp>
+#include <nx/httpd.hpp>
 
-namespace hxx {
+namespace nx {
 
 route&
 httpd::operator()(const method& m)
@@ -65,4 +65,4 @@ httpd::operator()(request& req, buffer& data, reply& rep)
     }
 }
 
-} // namespace hxx
+} // namespace nx

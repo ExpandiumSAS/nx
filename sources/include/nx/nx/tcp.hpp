@@ -61,7 +61,13 @@ public:
     {}
 
     tcp_base(this_type&& other)
-    { *this = std::move(other); }
+    : base_type(std::forward<base_type>(other)),
+    local_(std::move(other.local_)),
+    remote_(std::move(other.remote_)),
+    accept_cb_(std::move(other.accept_cb_)),
+    read_cb_(std::move(other.read_cb_)),
+    clients_(std::move(other.clients_))
+    {}
 
     virtual ~tcp_base()
     {}
@@ -88,9 +94,9 @@ public:
         local_ = to;
         base_type::handler(tags::on_connect) = cb;
 
-        base_type::handler(tags::on_drain) = [](Derived& h) {
+        base_type::handler(tags::on_drain) = [&](Derived& h) {
             // Socket is connected
-            callback_access::call<connected_tag>(h);
+            callback_access::call<connected_tag>(*this);
         };
 
         base_type::start_write();
@@ -124,9 +130,9 @@ public:
         if (!error) {
             base_type::set_nonblocking();
 
-            base_type::handler(tags::on_readable) = [](Derived& h) {
+            base_type::handler(tags::on_readable) = [&](Derived& h) {
                 // New connection
-                callback_access::call<connection_tag>(h);
+                callback_access::call<connection_tag>(*this);
             };
 
             base_type::start_read(true);

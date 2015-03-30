@@ -1,7 +1,7 @@
-#include <hxx/headers.hpp>
-#include <hxx/escape.hpp>
+#include <nx/headers.hpp>
+#include <nx/escape.hpp>
 
-namespace hxx {
+namespace nx {
 
 std::ostream&
 headers::operator()(std::ostream& os) const
@@ -13,4 +13,4 @@ headers::operator()(std::ostream& os) const
     return os;
 }
 
-} // namespace hxx
+} // namespace nx

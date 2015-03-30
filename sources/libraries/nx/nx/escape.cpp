@@ -2,10 +2,10 @@
 
 #include <regex>
 
-#include <hxx/escape.hpp>
-#include <hxx/utils.hpp>
+#include <nx/escape.hpp>
+#include <nx/utils.hpp>
 
-namespace hxx {
+namespace nx {
 
 std::string
 escape(const std::string& s)
@@ -77,4 +77,4 @@ unescape(const std::string& s)
     return unescaped;
 }
 
-} // namespace hxx
+} // namespace nx

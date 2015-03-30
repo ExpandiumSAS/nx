@@ -1,17 +1,17 @@
 #include <cctype>
 #include <algorithm>
 
-#include <hxx/request.hpp>
-#include <hxx/error.hpp>
-#include <hxx/utils.hpp>
+#include <nx/request.hpp>
+#include <nx/error.hpp>
+#include <nx/utils.hpp>
 
-namespace hxx {
+namespace nx {
 
 request::request()
 : content_length_(0)
 {}
 
-request::request(const hxx::method& m)
+request::request(const nx::method& m)
 : method_(m.str),
 content_length_(0)
 {}
@@ -150,7 +150,7 @@ request::content() const
     auto hdrs = headers_;
 
     if (method_ != GET.str) {
-        hdrs << header(hxx::content_length, body.size());
+        hdrs << header(nx::content_length, body.size());
     }
 
     oss
@@ -176,7 +176,7 @@ request::operator/(const std::string& path)
 }
 
 request&
-request::operator<<(const hxx::method& m)
+request::operator<<(const nx::method& m)
 {
     method_ = m.str;
 
@@ -225,7 +225,7 @@ request::operator<<(const json& js)
 }
 
 bool
-request::is(const hxx::method& m) const
+request::is(const nx::method& m) const
 { return method_ == m.str; }
 
 bool
@@ -238,4 +238,4 @@ request::is_form() const
         ;
 }
 
-} // namespace hxx
+} // namespace nx

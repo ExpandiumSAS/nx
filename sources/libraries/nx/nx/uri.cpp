@@ -1,13 +1,12 @@
 #include <iostream>
 
-#include <hxx/uri.hpp>
-#include <hxx/escape.hpp>
-#include <hxx/error.hpp>
-#include <hxx/regexp/http.hpp>
-#include <hxx/utils.hpp>
-#include <utf8.h>
+#include <nx/uri.hpp>
+#include <nx/escape.hpp>
+#include <nx/error.hpp>
+#include <nx/regexp/http.hpp>
+#include <nx/utils.hpp>
 
-namespace hxx {
+namespace nx {
 
 uri::uri(const std::string& u)
 { parse(u); }
@@ -90,4 +89,4 @@ uri::parse(const std::string& u)
     }
 }
 
-} // namespace hxx
+} // namespace nx

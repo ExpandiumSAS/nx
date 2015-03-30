@@ -1,10 +1,10 @@
 #include <iostream>
 #include <sstream>
 
-#include <hxx/reply.hpp>
-#include <hxx/utils.hpp>
+#include <nx/reply.hpp>
+#include <nx/utils.hpp>
 
-namespace hxx {
+namespace nx {
 
 reply::reply()
 : code_(200),
@@ -132,7 +132,7 @@ reply::content() const
     auto body = data_.str();
     auto hdrs = headers_;
 
-    hdrs << header(hxx::content_length, body.size());
+    hdrs << header(nx::content_length, body.size());
 
     oss
         << "HTTP/1.1 " << code_ << " " << status_ << "\r\n"
@@ -152,4 +152,4 @@ reply::operator<<(const header& h)
     return *this;
 }
 
-} // namespace hxx
+} // namespace nx

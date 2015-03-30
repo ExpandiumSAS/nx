@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include <hxx/route.hpp>
-#include <hxx/utils.hpp>
-#include <hxx/attributes.hpp>
+#include <nx/route.hpp>
+#include <nx/utils.hpp>
+#include <nx/attributes.hpp>
 
-namespace hxx {
+namespace nx {
 
 route&
 route::operator/(const char* path)
@@ -81,4 +81,4 @@ void
 route::operator()(const request& req, buffer& data, reply& rep) const
 { route_cb_(req, data, rep); }
 
-} // namespace hxx
+} // namespace nx

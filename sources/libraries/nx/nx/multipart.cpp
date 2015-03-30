@@ -1,8 +1,8 @@
-#include <hxx/multipart.hpp>
-#include <hxx/utils.hpp>
-#include <hxx/escape.hpp>
+#include <nx/multipart.hpp>
+#include <nx/utils.hpp>
+#include <nx/escape.hpp>
 
-namespace hxx {
+namespace nx {
 
 const char CR = 13;
 const char LF = 10;
@@ -269,4 +269,4 @@ void
 multipart_parser::on_body_end()
 {}
 
-} // namespace hxx
+} // namespace nx

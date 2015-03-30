@@ -1,8 +1,8 @@
-#include <hxx/attributes.hpp>
-#include <hxx/escape.hpp>
-#include <hxx/utils.hpp>
+#include <nx/attributes.hpp>
+#include <nx/escape.hpp>
+#include <nx/utils.hpp>
 
-namespace hxx {
+namespace nx {
 
 attribute_base::attribute_base(const std::string& n, const std::string& v)
 : name(n),
@@ -218,4 +218,4 @@ attribute_map::operator()(std::ostream& os) const
     return os;
 }
 
-} // namespace hxx
+} // namespace nx

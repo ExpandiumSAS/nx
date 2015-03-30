@@ -16,7 +16,6 @@
 #include <nx/callbacks.hpp>
 #include <nx/buffer.hpp>
 #include <nx/watchers.hpp>
-#include <nx/cond_var.hpp>
 #include <nx/error_code.hpp>
 
 namespace nx {
@@ -28,12 +27,14 @@ struct on_read_tag : callback_tag {};
 struct on_readable_tag : callback_tag {};
 struct on_drain_tag : callback_tag {};
 struct on_eof_tag : callback_tag {};
+struct on_closed_tag : callback_tag {};
 
 const on_error_tag on_error = {};
 const on_read_tag on_read = {};
 const on_readable_tag on_readable = {};
 const on_drain_tag on_drain = {};
 const on_eof_tag on_eof = {};
+const on_closed_tag on_closed = {};
 
 } // namespace tags
 
@@ -44,10 +45,11 @@ public:
     using this_type = handle<Derived, Callbacks...>;
     using callbacks = nx::callbacks<
         callback<tags::on_error_tag, Derived&, const error_code&>,
-        callback<tags::on_read_tag, Derived&, buffer&>,
+        callback<tags::on_read_tag, Derived&>,
         callback<tags::on_readable_tag, Derived&>,
-        callback<tags::on_eof_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
+        callback<tags::on_eof_tag, Derived&>,
+        callback<tags::on_closed_tag, Derived&>,
         Callbacks...
     >;
     using ptr_type = std::shared_ptr<Derived>;
@@ -61,7 +63,20 @@ public:
     { set_io_cb(); }
 
     handle(this_type&& other) noexcept
-    { *this = std::move(other); }
+    : fh_(other.fh_),
+    notify_only_(other.notify_only_),
+    io_(std::move(other.io_)),
+    closing_(other.closing_),
+    closed_(other.closed_),
+    callbacks_(std::move(other.callbacks_)),
+    wq_(std::move(other.wq_)),
+    rbuf_(std::move(other.rbuf_)),
+    read_size_(other.read_size_)
+    {
+        set_io_cb();
+        other.fh_ = -1;
+        other.closed_ = true;
+    }
 
     handle(const this_type& other) = delete;
     this_type& operator=(const this_type& other) = delete;
@@ -77,11 +92,10 @@ public:
         set_io_cb();
         closing_ = other.closing_;
         closed_ = other.closed_;
-        callbacks callbacks_;
+        callbacks_ = std::move(other.callbacks_);
         wq_ = std::move(other.wq_);
         rbuf_ = std::move(other.rbuf_);
         read_size_ = other.read_size_;
-        close_cv_ = std::move(other.close_cv_);
 
         other.fh_ = -1;
         other.closed_ = true;
@@ -112,6 +126,12 @@ public:
 
     int fh() const
     { return fh_; }
+
+    buffer& rbuf()
+    { return rbuf_; }
+
+    const buffer& rbuf() const
+    { return rbuf_; }
 
     template <
         typename Tag,
@@ -288,7 +308,7 @@ private:
             io_.stop();
             handler(tags::on_eof)(derived());
         } else {
-            handler(tags::on_read)(derived(), rbuf_);
+            handler(tags::on_read)(derived());
         }
     }
 
@@ -341,6 +361,7 @@ private:
 
         io_.stop();
         closed_ = true;
+        handler(tags::on_closed)(derived());
     }
 
 private:
@@ -355,7 +376,6 @@ private:
     queue_type wq_;
     buffer rbuf_;
     std::size_t read_size_ = 1024 * 1024;
-    cond_var close_cv_;
 };
 
 } // namespace nx
