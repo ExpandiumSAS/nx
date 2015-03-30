@@ -8,6 +8,11 @@ http::http()
 parsed_(false)
 {}
 
+http::http(int fh, const endpoint& local, const endpoint& remote)
+: base_type(fh, local, remote),
+parsed_(false)
+{}
+
 http::http(http&& other)
 : base_type(std::forward<base_type>(other))
 { *this = std::move(other); }

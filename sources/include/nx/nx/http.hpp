@@ -21,6 +21,7 @@ public:
     >;
 
     http();
+    http(int fh, const endpoint& local, const endpoint& remote);
     http(const http& other) = delete;
     http(http&& other);
     virtual ~http();

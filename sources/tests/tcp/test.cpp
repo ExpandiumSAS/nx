@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         [&](nx::tcp& t) {
             got_new_connection = true;
         },
-        [&](nx::tcp& t, nx::buffer& buf) {
+        [&](nx::tcp& t) {
             std::string str;
 
             t >> str;
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         }
     );
 
-    c[on_read] = [&](nx::tcp& t, nx::buffer& b) {
+    c[on_read] = [&](nx::tcp& t) {
         std::string str;
         t >> str;
 
