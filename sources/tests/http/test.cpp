@@ -7,7 +7,7 @@
 #include <nx/nx.hpp>
 #include <nx/utils.hpp>
 
-BOOST_AUTO_TEST_CASE(httpd)
+BOOST_AUTO_TEST_CASE(http_server)
 {
     using namespace nx;
 
