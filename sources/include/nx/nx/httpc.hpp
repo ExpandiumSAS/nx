@@ -12,29 +12,27 @@
 
 namespace nx {
 
-class NX_API httpc
+class NX_API http_request
 {
 public:
-    using done_cb = std::function<void()>;
+    http_request(const method& m, const endpoint& ep);
+    http_request(const http_request& other) = delete;
+    http_request(http_request&& other);
+    virtual ~http_request();
 
-    httpc(const method& m, const endpoint& ep);
-    httpc(const httpc& other) = delete;
-    httpc(httpc&& other);
-    virtual ~httpc();
+    http_request& operator=(const http_request& other) = delete;
+    http_request& operator=(http_request&& other);
 
-    httpc& operator=(const httpc& other) = delete;
-    httpc& operator=(httpc&& other);
-
-    httpc& operator/(const std::string& path);
+    http_request& operator/(const std::string& path);
 
     template <typename T>
-    httpc& operator<<(const T& t)
+    http_request& operator<<(const T& t)
     {
         req_ << t;
         return *this;
     }
 
-    httpc& operator=(reply_cb cb);
+    http_request& operator=(reply_cb cb);
 
 private:
     void start();
@@ -42,6 +40,12 @@ private:
     request req_;
     endpoint ep_;
     reply_cb reply_cb_;
+};
+
+class NX_API httpc
+{
+public:
+    http_request operator()(const method& m, const endpoint& ep);
 };
 
 } // namespace nx

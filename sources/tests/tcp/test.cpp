@@ -23,12 +23,10 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
 
     std::string msg("a message");
 
-    nx::tcp s;
-
     bool got_new_connection = false;
     bool got_msg = false;
 
-    auto sep = s.serve(
+    auto endpoint = nx::serve<nx::tcp>(
         nx::endpoint("127.0.0.1", 0),
         [&](nx::tcp& t) {
             got_new_connection = true;
@@ -46,14 +44,12 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         }
     );
 
-    nx::tcp c;
-
     bool connected = false;
     bool got_reply = false;
     bool disconnected = false;
 
-    c.connect(
-        sep,
+    auto& c = nx::connect<nx::tcp>(
+        endpoint,
         [&](nx::tcp& t) {
             connected = true;
             t << msg;

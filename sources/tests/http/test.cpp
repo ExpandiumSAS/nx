@@ -33,6 +33,17 @@ BOOST_AUTO_TEST_CASE(nx_escape)
 BOOST_AUTO_TEST_CASE(nx_httpd)
 {
     using namespace nx;
+
+    nx::timer deadline;
+    nx::cond_var cv;
+
+    deadline(5.0) = [&](nx::timer& t, int events) {
+        t.stop();
+        cv.notify();
+    };
+
+    deadline.start();
+
     auto ep = endpoint("127.0.0.1");
     const char* hello_world = "Hello, world!";
 
@@ -48,7 +59,7 @@ BOOST_AUTO_TEST_CASE(nx_httpd)
             ;
     };
 
-    auto sep = hd(ep, "server");
+    auto sep = hd(ep);
 
     httpc hc;
 
@@ -60,10 +71,11 @@ BOOST_AUTO_TEST_CASE(nx_httpd)
 
         reply_ok = rep && data == hello_world;
 
-        nx::stop();
+        deadline.stop();
+        cv.notify();
     };
 
-    nx::run();
+    cv.wait();
 
     BOOST_CHECK_MESSAGE(got_request, "httpd got a request");
     BOOST_CHECK_MESSAGE(got_reply, "httpc got a reply");
@@ -89,13 +101,27 @@ void test_done()
     static std::size_t count = 0;
 
     if (++count == stop_count) {
-        nx::stop();
+        //nx::stop();
     }
 }
 
 BOOST_AUTO_TEST_CASE(nx_httpd_json)
 {
     using namespace nx;
+
+    std::size_t deadline_count = 2;
+
+    nx::timer deadlines[deadline_count];
+    nx::cond_var cvs[deadline_count];
+
+    for (std::size_t i = 0; i < deadline_count; i++) {
+        deadlines[i](5.0) = [&](nx::timer& t, int events) {
+            t.stop();
+            cvs[i].notify();
+        };
+
+        deadlines[i].start();
+    }
 
     add_json_format<person>(person_fmt);
 
@@ -125,7 +151,7 @@ BOOST_AUTO_TEST_CASE(nx_httpd_json)
         put_request_ok = id == 42 && tp.name == p.name && tp.age == p.age;
     };
 
-    auto sep = hd(ep, "server");
+    auto sep = hd(ep);
 
     httpc hc;
 
@@ -142,7 +168,8 @@ BOOST_AUTO_TEST_CASE(nx_httpd_json)
 
         get_reply_ok = tp.name == p.name && tp.age == p.age;
 
-        test_done();
+        deadlines[0].stop();
+        cvs[0].notify();
     };
 
     hc(PUT, sep)
@@ -152,10 +179,13 @@ BOOST_AUTO_TEST_CASE(nx_httpd_json)
             got_put_reply = true;
             put_reply_ok = true;
 
-            test_done();
+            deadlines[1].stop();
+            cvs[1].notify();
         };
 
-    nx::run();
+    for (std::size_t i = 0; i < deadline_count; i++) {
+        cvs[i].wait();
+    }
 
     BOOST_CHECK_MESSAGE(got_get_request, "httpd got GET request");
     BOOST_CHECK_MESSAGE(got_put_request, "httpd got PUT request");

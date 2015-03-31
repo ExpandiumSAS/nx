@@ -365,9 +365,12 @@ private:
 
         closed_ = true;
 
-        io_.sync_stop();
-        handler(tags::on_stopped)(derived());
-        handler(tags::on_closed)(derived());
+        io_.stop(
+            [&]() {
+                handler(tags::on_stopped)(derived());
+                handler(tags::on_closed)(derived());
+            }
+        );
     }
 
 private:

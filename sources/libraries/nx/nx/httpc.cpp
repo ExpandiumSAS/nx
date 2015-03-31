@@ -2,19 +2,19 @@
 
 namespace nx {
 
-httpc::httpc(const method& m, const endpoint& ep)
+http_request::http_request(const method& m, const endpoint& ep)
 : req_(m),
 ep_(ep)
 {}
 
-httpc::httpc(httpc&& other)
+http_request::http_request(http_request&& other)
 { *this = std::move(other); }
 
-httpc::~httpc()
+http_request::~http_request()
 {}
 
-httpc&
-httpc::operator=(httpc&& other)
+http_request&
+http_request::operator=(http_request&& other)
 {
     req_ = std::move(other.req_);
     ep_ = std::move(other.ep_);
@@ -23,15 +23,15 @@ httpc::operator=(httpc&& other)
     return *this;
 }
 
-httpc&
-httpc::operator/(const std::string& path)
+http_request&
+http_request::operator/(const std::string& path)
 {
     req_ / path;
     return *this;
 }
 
-httpc&
-httpc::operator=(reply_cb cb)
+http_request&
+http_request::operator=(reply_cb cb)
 {
     reply_cb_ = cb;
     start();
@@ -40,7 +40,11 @@ httpc::operator=(reply_cb cb)
 }
 
 void
-httpc::start()
+http_request::start()
 { connect(ep_, std::move(req_), std::move(reply_cb_)); }
+
+http_request
+httpc::operator()(const method& m, const endpoint& ep)
+{ return http_request(m, ep); }
 
 } // namespace nx

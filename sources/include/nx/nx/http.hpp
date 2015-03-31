@@ -53,13 +53,48 @@ private:
     reply_cb reply_cb_;
 };
 
-NX_API
+template <typename OnRequest>
 const endpoint&
-serve(http& h, const endpoint& ep, request_cb&& cb);
+serve(http& h, const endpoint& ep, OnRequest&& cb)
+{
+    return
+        serve(
+            h,
+            ep,
+            [cb = std::move(cb)](http& c) {
+                c << std::move(cb);
+            },
+            [](http& c) {
+                c.process_request();
+            }
+        );
+}
 
-NX_API
+template <typename OnReply>
 http&
-connect(const endpoint& ep, request req, reply_cb cb);
+connect(const endpoint& ep, request req, OnReply&& cb)
+{
+    auto p = new_handle<http>();
+    auto& h = *p;
+
+    h
+        << std::move(req)
+        << std::move(cb)
+        ;
+
+    h[tags::on_read] = [](http& t) {
+        t.process_reply();
+    };
+
+    return
+        connect(
+            h,
+            ep,
+            [](http& t) {
+                t.send_request();
+            }
+        );
+}
 
 } // namespace nx
 
