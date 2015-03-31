@@ -36,8 +36,8 @@ public:
     loop& operator<<(void_cb&& cb);
     loop& operator<<(loop_op&& op);
 
-    void add_handle(handle_ptr p);
-    void remove_handle(handle_ptr p);
+    void register_handle(handle_ptr p);
+    void unregister_handle(handle_ptr p);
 
 private:
     loop();
@@ -50,6 +50,7 @@ private:
 
     void start();
     void stop();
+    bool run(int flags);
 
     loop& enqueue(loop_op&& op);
 
@@ -69,13 +70,21 @@ NX_API
 loop&
 async();
 
+NX_API
+void
+register_handle(handle_ptr p);
+
+NX_API
+void
+unregister_handle(handle_ptr p);
+
 template <typename Handle, typename... Args>
 std::shared_ptr<Handle>
 new_handle(Args&&... args)
 {
     auto p = std::make_shared<Handle>(std::forward<Args>(args)...);
 
-    loop::get().add_handle(handle_ptr(p));
+    register_handle(p);
 
     return p;
 }

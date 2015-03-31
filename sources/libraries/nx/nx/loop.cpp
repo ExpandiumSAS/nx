@@ -24,7 +24,7 @@ loop::operator<<(loop_op&& op)
 { return enqueue(std::move(op)); }
 
 void
-loop::add_handle(handle_ptr p)
+loop::register_handle(handle_ptr p)
 {
     std::lock_guard<std::mutex> g(hm_);
 
@@ -32,7 +32,7 @@ loop::add_handle(handle_ptr p)
 }
 
 void
-loop::remove_handle(handle_ptr p)
+loop::unregister_handle(handle_ptr p)
 {
     std::lock_guard<std::mutex> g(hm_);
 
@@ -57,6 +57,24 @@ loop::~loop()
     ev_loop_destroy(l_);
 }
 
+bool
+loop::run(int flags)
+{
+    loop_op op;
+
+    while (q_.try_dequeue(op)) {
+        if (op.cb) {
+            op.cb(l_);
+        }
+
+        if (op.h) {
+            op.h();
+        }
+    }
+
+    return ev_run(l_, flags);
+}
+
 void
 loop::start()
 {
@@ -65,20 +83,33 @@ loop::start()
             ev_loop_fork(l_);
 
             while (!stop_.load()) {
-                loop_op op;
-
-                while (q_.try_dequeue(op)) {
-                    if (op.cb) {
-                        op.cb(l_);
-                    }
-
-                    if (op.h) {
-                        op.h();
-                    }
-                }
-
-                ev_run(l_, EVRUN_ONCE);
+                run(EVRUN_ONCE);
             }
+
+            {
+                std::lock_guard<std::mutex> g(hm_);
+
+                std::cout
+                    << "pushing close on "
+                    << handles_.size() << " handles"
+                    << std::endl;
+
+                for (auto& h : handles_) {
+                    h->push_close();
+                }
+            }
+
+            std::size_t count = 0;
+
+            while (run(EVRUN_NOWAIT)) {
+                count++;
+            }
+
+            std::cout
+                << "loop stopped after "
+                << count << " iterations" << "\n"
+                << handles_.size() << " handles left"
+                << std::endl;
         }
     );
 }
@@ -111,5 +142,13 @@ loop::enqueue(loop_op&& op)
 loop&
 async()
 { return loop::get(); }
+
+void
+register_handle(handle_ptr p)
+{ loop::get().register_handle(p); }
+
+void
+unregister_handle(handle_ptr p)
+{ loop::get().unregister_handle(p); }
 
 } // namespace nx

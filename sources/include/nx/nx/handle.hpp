@@ -369,6 +369,7 @@ private:
             [&]() {
                 handler(tags::on_stopped)(derived());
                 handler(tags::on_closed)(derived());
+                unregister_handle(ptr());
             }
         );
     }
