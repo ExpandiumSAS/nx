@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
     nx::cond_var cvs[deadline_count];
 
     for (std::size_t i = 0; i < deadline_count; i++) {
-        deadlines[i](5.0) = [&](nx::timer& t, int events) {
+        deadlines[i](10.0) = [&](nx::timer& t, int events) {
             t.stop();
             cvs[i].notify();
         };
