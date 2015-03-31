@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <memory>
 #include <queue>
+#include <atomic>
 
 #include <nx/config.h>
 
@@ -28,16 +29,14 @@ struct on_read_tag : callback_tag {};
 struct on_readable_tag : callback_tag {};
 struct on_drain_tag : callback_tag {};
 struct on_eof_tag : callback_tag {};
-struct on_stopped_tag : callback_tag {};
-struct on_closed_tag : callback_tag {};
+struct on_close_tag : callback_tag {};
 
 const on_error_tag on_error = {};
 const on_read_tag on_read = {};
 const on_readable_tag on_readable = {};
 const on_drain_tag on_drain = {};
 const on_eof_tag on_eof = {};
-const on_stopped_tag on_stopped = {};
-const on_closed_tag on_closed = {};
+const on_close_tag on_close = {};
 
 } // namespace tags
 
@@ -73,25 +72,22 @@ public:
         callback<tags::on_readable_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
         callback<tags::on_eof_tag, Derived&>,
-        callback<tags::on_stopped_tag, Derived&>,
-        callback<tags::on_closed_tag, Derived&>,
+        callback<tags::on_close_tag, Derived&>,
         Callbacks...
     >;
 
     handle(int fh) noexcept
     : fh_(fh),
-    notify_only_(false),
-    io_(fh),
-    closing_(false),
-    closed_(false)
+    io_(fh)
     { set_io_cb(); }
 
     handle(this_type&& other) noexcept
     : fh_(other.fh_),
-    notify_only_(other.notify_only_),
     io_(std::move(other.io_)),
-    closing_(other.closing_),
-    closed_(other.closed_),
+    notify_only_(other.notify_only_.load()),
+    closing_(other.closing_.load()),
+    closed_(other.closed_.load()),
+    eof_(other.eof_.load()),
     callbacks_(std::move(other.callbacks_)),
     wq_(std::move(other.wq_)),
     rbuf_(std::move(other.rbuf_)),
@@ -100,6 +96,7 @@ public:
         set_io_cb();
         other.fh_ = -1;
         other.closed_ = true;
+        other.eof_ = true;
     }
 
     handle(const this_type& other) = delete;
@@ -111,11 +108,12 @@ public:
     this_type& operator=(this_type&& other) noexcept
     {
         fh_ = other.fh_;
-        notify_only_ = other.notify_only_;
         io_ = std::move(other.io_);
         set_io_cb();
-        closing_ = other.closing_;
-        closed_ = other.closed_;
+        notify_only_ = other.notify_only_.load();
+        closing_ = other.closing_.load();
+        closed_ = other.closed_.load();
+        eof_ = other.eof_.load();
         callbacks_ = std::move(other.callbacks_);
         wq_ = std::move(other.wq_);
         rbuf_ = std::move(other.rbuf_);
@@ -123,6 +121,7 @@ public:
 
         other.fh_ = -1;
         other.closed_ = true;
+        other.eof_ = true;
 
         return *this;
     }
@@ -314,8 +313,7 @@ private:
         }
 
         if (nread == 0) {
-            io_.stop();
-            handler(tags::on_eof)(derived());
+            io_.stop([&]() { eof(); });
         } else {
             handler(tags::on_read)(derived());
         }
@@ -367,21 +365,34 @@ private:
 
         io_.stop(
             [&]() {
-                handler(tags::on_stopped)(derived());
-                handler(tags::on_closed)(derived());
+                eof();
+                handler(tags::on_close)(derived());
+                ::close(fh_);
                 unregister_handle(ptr());
             }
         );
+    }
+
+    void eof()
+    {
+        if (eof_) {
+            return;
+        }
+
+        eof_ = true;
+
+        handler(tags::on_eof)(derived());
     }
 
 private:
     using queue_type = std::queue<buffer>;
 
     int fh_;
-    bool notify_only_;
     io io_;
-    bool closing_;
-    bool closed_;
+    std::atomic_bool notify_only_{false};
+    std::atomic_bool closing_{false};
+    std::atomic_bool closed_{false};
+    std::atomic_bool eof_{false};
     callbacks callbacks_;
     queue_type wq_;
     buffer rbuf_;

@@ -173,7 +173,7 @@ serve(
                 auto cp = new_handle<Handle>(fd);
                 auto& c = *cp;
 
-                c[tags::on_stopped] = [](Handle& c) {
+                c[tags::on_close] = [](Handle& c) {
                     handle_error(
                         c,
                         "shutdown",

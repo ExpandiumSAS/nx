@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 
 #include <nx/loop.hpp>
 
@@ -72,6 +74,10 @@ loop::run(int flags)
         }
     }
 
+    if ((flags & EVRUN_NOWAIT) && ev_pending_count(l_) == 0) {
+        return false;
+    }
+
     return ev_run(l_, flags);
 }
 
@@ -82,17 +88,12 @@ loop::start()
         [this]() {
             ev_loop_fork(l_);
 
-            while (!stop_.load()) {
+            while (!stop_) {
                 run(EVRUN_ONCE);
             }
 
             {
                 std::lock_guard<std::mutex> g(hm_);
-
-                std::cout
-                    << "pushing close on "
-                    << handles_.size() << " handles"
-                    << std::endl;
 
                 for (auto& h : handles_) {
                     h->push_close();
@@ -100,16 +101,22 @@ loop::start()
             }
 
             std::size_t count = 0;
+            const std::size_t max_loop_count = 1000;
 
             while (run(EVRUN_NOWAIT)) {
                 count++;
-            }
 
-            std::cout
-                << "loop stopped after "
-                << count << " iterations" << "\n"
-                << handles_.size() << " handles left"
-                << std::endl;
+                if (count == max_loop_count) {
+                    std::ostringstream oss;
+
+                    oss
+                        << "WHOA THERE !\n"
+                        << "the loop couldn't stop after "
+                        << max_loop_count << " iterations";
+
+                    throw std::runtime_error(oss.str());
+                }
+            }
         }
     );
 }
@@ -117,6 +124,10 @@ loop::start()
 void
 loop::stop()
 {
+    if (stop_) {
+        return;
+    }
+
     stop_ = true;
 
     *this << [&](evloop l) {
@@ -138,6 +149,10 @@ loop::enqueue(loop_op&& op)
 
     return *this;
 }
+
+void
+stop()
+{ loop::get().stop(); }
 
 loop&
 async()

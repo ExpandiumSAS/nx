@@ -32,6 +32,9 @@ class NX_API loop
 public:
     static loop& get();
 
+    void start();
+    void stop();
+
     loop& operator<<(loop_cb&& cb);
     loop& operator<<(void_cb&& cb);
     loop& operator<<(loop_op&& op);
@@ -48,8 +51,6 @@ private:
     void operator=(const loop&) = delete;
     void operator=(loop&&) = delete;
 
-    void start();
-    void stop();
     bool run(int flags);
 
     loop& enqueue(loop_op&& op);
@@ -65,6 +66,10 @@ private:
     handle_set handles_;
     std::mutex hm_;
 };
+
+NX_API
+void
+stop();
 
 NX_API
 loop&

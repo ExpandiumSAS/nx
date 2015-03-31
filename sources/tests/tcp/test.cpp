@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <atomic>
 
 #include <nx/unit_test.hpp>
 
@@ -23,8 +24,8 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
 
     std::string msg("a message");
 
-    bool got_new_connection = false;
-    bool got_msg = false;
+    std::atomic_bool got_new_connection{ false };
+    std::atomic_bool got_msg{ false };
 
     auto endpoint = nx::serve<nx::tcp>(
         nx::endpoint("127.0.0.1", 0),
@@ -44,14 +45,19 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         }
     );
 
-    bool connected = false;
-    bool got_reply = false;
-    bool disconnected = false;
+    std::atomic_bool connected{ false };
+    std::atomic_bool got_reply{ false };
+    std::atomic_bool disconnected{ false };
 
     auto& c = nx::connect<nx::tcp>(
         endpoint,
         [&](nx::tcp& t) {
             connected = true;
+
+            t[on_eof] = [&](nx::tcp& t) {
+                disconnected = true;
+            };
+
             t << msg;
         }
     );
@@ -67,11 +73,8 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         cv.notify();
     };
 
-    c[on_eof] = [&](nx::tcp& t) {
-        disconnected = true;
-    };
-
     cv.wait();
+    nx::stop();
 
     BOOST_CHECK_MESSAGE(got_new_connection, "server got a connection");
     BOOST_CHECK_MESSAGE(got_msg, "server got correct message");
