@@ -23,6 +23,22 @@ loop&
 loop::operator<<(loop_op&& op)
 { return enqueue(std::move(op)); }
 
+void
+loop::add_handle(handle_ptr p)
+{
+    std::lock_guard<std::mutex> g(hm_);
+
+    handles_.insert(p);
+}
+
+void
+loop::remove_handle(handle_ptr p)
+{
+    std::lock_guard<std::mutex> g(hm_);
+
+    handles_.erase(p);
+}
+
 loop::loop()
 : l_(ev_default_loop())
 {

@@ -1,6 +1,8 @@
 #ifndef __NX_HTTP_H__
 #define __NX_HTTP_H__
 
+#include <functional>
+
 #include <nx/config.h>
 #include <nx/tcp.hpp>
 #include <nx/request.hpp>
@@ -8,20 +10,21 @@
 
 namespace nx {
 
+using request_cb = std::function<
+    void(request& req, buffer& data, reply& rep)
+>;
+using reply_cb = std::function<
+    void(reply& rep, buffer& data)
+>;
+
 class NX_API http : public tcp_base<http>
 {
 public:
     using base_type = tcp_base<http>;
     using this_type = http;
-    using request_cb = std::function<
-        void(request& req, buffer& data, reply& rep)
-    >;
-    using reply_cb = std::function<
-        void(reply& rep, buffer& data)
-    >;
 
     http();
-    http(int fh, const endpoint& local, const endpoint& remote);
+    http(int fh);
     http(const http& other) = delete;
     http(http&& other);
     virtual ~http();
@@ -32,17 +35,12 @@ public:
     void process_reply();
     void send_request();
 
-    const endpoint& operator()(
-        const endpoint& ep,
-        const std::string& root,
-        request_cb cb
-    );
+    using base_type::operator<<;
 
-    void operator()(
-        const endpoint& ep,
-        request&& req,
-        reply_cb cb
-    );
+    http& operator<<(request_cb cb);
+    http& operator<<(request req);
+    http& operator<<(reply_cb cb);
+    http& operator<<(reply rep);
 
 private:
     bool request_parsed();
@@ -54,6 +52,14 @@ private:
     request_cb request_cb_;
     reply_cb reply_cb_;
 };
+
+NX_API
+const endpoint&
+serve(http& h, const endpoint& ep, request_cb&& cb);
+
+NX_API
+http&
+connect(const endpoint& ep, request req, reply_cb cb);
 
 } // namespace nx
 

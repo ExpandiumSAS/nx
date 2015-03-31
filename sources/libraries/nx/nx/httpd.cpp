@@ -15,12 +15,12 @@ httpd::operator()(const method& m)
 }
 
 const endpoint&
-httpd::operator()(const endpoint& ep, const std::string& root)
+httpd::operator()(const endpoint& ep)
 {
     return
-        base_type::operator()(
+        serve(
+            s_,
             ep,
-            root,
             [this](request& req, buffer& data, reply& rep) {
                 (*this)(req, data, rep);
             }

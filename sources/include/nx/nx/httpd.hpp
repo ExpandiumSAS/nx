@@ -10,18 +10,17 @@
 
 namespace nx {
 
-class NX_API httpd : public http
+class NX_API httpd
 {
 public:
-    using base_type = http;
-
     route& operator()(const method& m);
 
-    const endpoint& operator()(const endpoint& ep, const std::string& root);
+    const endpoint& operator()(const endpoint& ep);
 
 private:
     void operator()(request& req, buffer& data, reply& rep);
 
+    http s_;
     routes_map routes_map_;
 };
 

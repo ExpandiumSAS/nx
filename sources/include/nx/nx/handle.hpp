@@ -13,6 +13,7 @@
 
 #include <nx/config.h>
 
+#include <nx/handle_base.hpp>
 #include <nx/callbacks.hpp>
 #include <nx/buffer.hpp>
 #include <nx/watchers.hpp>
@@ -40,8 +41,29 @@ const on_closed_tag on_closed = {};
 
 } // namespace tags
 
+template <typename Handle>
+bool
+handle_error(Handle& h, const error_code& e)
+{
+    if (!e) {
+        return false;
+    }
+
+    if (!h.handler(tags::on_error)(h, e)) {
+        // Unhandled error
+        std::cerr << "unhandled error: " << e << std::endl;
+    }
+
+    return true;
+}
+
+template <typename Handle>
+bool
+handle_error(Handle& h, const char* what, int status)
+{ return handle_error(h, error_code(what, status)); }
+
 template <typename Derived, typename... Callbacks>
-class handle
+class handle : public handle_base
 {
 public:
     using this_type = handle<Derived, Callbacks...>;
@@ -55,7 +77,6 @@ public:
         callback<tags::on_closed_tag, Derived&>,
         Callbacks...
     >;
-    using ptr_type = std::shared_ptr<Derived>;
 
     handle(int fh) noexcept
     : fh_(fh),
@@ -85,7 +106,7 @@ public:
     this_type& operator=(const this_type& other) = delete;
 
     virtual ~handle()
-    { close(); }
+    {}
 
     this_type& operator=(this_type&& other) noexcept
     {
@@ -122,6 +143,7 @@ public:
     void set_nonblocking()
     {
         handle_error(
+            derived(),
             "setting non-blocking I/O",
             fcntl(fh_, F_SETFL, fcntl(fh_, F_GETFL, 0) | O_NONBLOCK)
         );
@@ -191,22 +213,22 @@ public:
         return *this;
     }
 
-    bool handle_error(const error_code& e)
+    void start_read(bool notify_only = false)
     {
-        if (!e) {
-            return false;
-        }
-
-        if (!handler(tags::on_error)(derived(), e)) {
-            // Unhandled error
-            std::cerr << "unhandled error: " << e << std::endl;
-        }
-
-        return true;
+        notify_only_ = notify_only;
+        io_ |= READ;
+        io_.start();
     }
 
-    bool handle_error(const char* what, int status)
-    { return handle_error(error_code(what, status)); }
+    void start_write()
+    {
+        if (wq_.empty() && closing_) {
+            close();
+        } else {
+            io_ |= WRITE;
+            io_.start();
+        }
+    }
 
 protected:
     template <typename Iterator>
@@ -231,23 +253,6 @@ protected:
         return *this;
     }
 
-    void start_read(bool notify_only = false)
-    {
-        notify_only_ = notify_only;
-        io_ |= READ;
-        io_.start();
-    }
-
-    void start_write()
-    {
-        if (wq_.empty() && closing_) {
-            close();
-        } else {
-            io_ |= WRITE;
-            io_.start();
-        }
-    }
-
     /// CRTP interface
     Derived* derived_this()
     { return static_cast<Derived*>(this); }
@@ -262,7 +267,7 @@ private:
     {
         io_ = [&](int events) {
             if (events & ERROR) {
-                handle_error("read/write error", errno);
+                handle_error(derived(), "read/write error", errno);
                 return;
             }
 
@@ -287,6 +292,7 @@ private:
         int available = 0;
 
         handle_error(
+            derived(),
             "error reading available bytes",
             ioctl(fh_, FIONREAD, &available)
         );
@@ -303,7 +309,7 @@ private:
         }
 
         if (nread < 0) {
-            handle_error("read error", nread);
+            handle_error(derived(), "read error", nread);
             return;
         }
 
@@ -336,7 +342,7 @@ private:
 
         if (nwritten < 0) {
             if (errno != EAGAIN && errno != EINTR && errno != EWOULDBLOCK) {
-                handle_error("write error", errno);
+                handle_error(derived(), "write error", errno);
             }
 
             return;

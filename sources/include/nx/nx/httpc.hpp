@@ -12,58 +12,36 @@
 
 namespace nx {
 
-class NX_API client
+class NX_API httpc
 {
 public:
-    using reply_cb = http::reply_cb;
     using done_cb = std::function<void()>;
 
-    client(const method& m, const endpoint& ep, done_cb cb);
-    client(const client& other) = delete;
-    client(client&& other);
-    virtual ~client();
+    httpc(const method& m, const endpoint& ep);
+    httpc(const httpc& other) = delete;
+    httpc(httpc&& other);
+    virtual ~httpc();
 
-    client& operator=(const client& other) = delete;
-    client& operator=(client&& other);
+    httpc& operator=(const httpc& other) = delete;
+    httpc& operator=(httpc&& other);
 
-    client& operator/(const std::string& path);
+    httpc& operator/(const std::string& path);
 
     template <typename T>
-    client& operator<<(const T& t)
+    httpc& operator<<(const T& t)
     {
         req_ << t;
         return *this;
     }
 
-    client& operator=(reply_cb cb);
+    httpc& operator=(reply_cb cb);
 
 private:
     void start();
 
-    http http_;
     request req_;
     endpoint ep_;
     reply_cb reply_cb_;
-    done_cb done_cb_;
-};
-
-using client_map = std::unordered_map<std::size_t, client>;
-
-class NX_API httpc
-{
-public:
-    httpc();
-    httpc(const httpc& other) = delete;
-    httpc(httpc&& other);
-    virtual ~httpc();
-
-    httpc& operator=(httpc&& other);
-
-    client& operator()(const method& m, const endpoint& ep);
-
-private:
-    std::size_t next_id_;
-    client_map clients_;
 };
 
 } // namespace nx

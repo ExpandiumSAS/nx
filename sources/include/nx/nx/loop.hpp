@@ -3,12 +3,15 @@
 
 #include <thread>
 #include <atomic>
+#include <mutex>
 #include <functional>
+#include <unordered_set>
 
 #include <moodycamel/concurrentqueue.hpp>
 
-#include <nx/ev.hpp>
 #include <nx/config.h>
+#include <nx/ev.hpp>
+#include <nx/handle_base.hpp>
 
 namespace nx {
 
@@ -33,6 +36,9 @@ public:
     loop& operator<<(void_cb&& cb);
     loop& operator<<(loop_op&& op);
 
+    void add_handle(handle_ptr p);
+    void remove_handle(handle_ptr p);
+
 private:
     loop();
     ~loop();
@@ -55,11 +61,24 @@ private:
     std::atomic_bool stop_{false};
     std::thread t_;
     queue_type q_;
+    handle_set handles_;
+    std::mutex hm_;
 };
 
 NX_API
 loop&
 async();
+
+template <typename Handle, typename... Args>
+std::shared_ptr<Handle>
+new_handle(Args&&... args)
+{
+    auto p = std::make_shared<Handle>(std::forward<Args>(args)...);
+
+    loop::get().add_handle(handle_ptr(p));
+
+    return p;
+}
 
 } // namespace nx
 

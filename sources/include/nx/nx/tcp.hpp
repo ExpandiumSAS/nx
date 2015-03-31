@@ -6,10 +6,6 @@
 #include <sys/socket.h>
 
 #include <functional>
-#include <memory>
-#include <unordered_map>
-#include <utility>
-#include <tuple>
 
 #include <nx/handle.hpp>
 #include <nx/endpoint.hpp>
@@ -17,56 +13,32 @@
 
 namespace nx {
 
-namespace tags {
-
-struct on_connect_tag : callback_tag {};
-
-const on_connect_tag on_connect = {};
-
-} // namespace tags
-
 template <typename Derived, typename... Callbacks>
 class tcp_base
 : public handle<
     Derived,
-    callback<tags::on_connect_tag, Derived&>,
     Callbacks...
 >
 {
 public:
     using base_type = handle<
         Derived,
-        callback<tags::on_connect_tag, Derived&>,
         Callbacks...
     >;
     using this_type = tcp_base<Derived, Callbacks...>;
-    using accept_cb = std::function<void(Derived& t)>;
-    using connect_cb = std::function<void(Derived& t)>;
-    using read_cb = typename callback_signature<
-        tags::on_read_tag,
-        base_type
-    >::type;
-
-    struct connected_tag {};
-    struct connection_tag {};
 
     tcp_base()
     : base_type(socket(PF_INET, SOCK_STREAM, 0))
     {}
 
-    tcp_base(int fh, const endpoint& local, const endpoint& remote)
-    : base_type(fh),
-    local_(local),
-    remote_(remote)
-    {}
+    tcp_base(int fh)
+    : base_type(fh)
+    { update_endpoints(); }
 
     tcp_base(this_type&& other)
     : base_type(std::forward<base_type>(other)),
     local_(std::move(other.local_)),
-    remote_(std::move(other.remote_)),
-    accept_cb_(std::move(other.accept_cb_)),
-    read_cb_(std::move(other.read_cb_)),
-    clients_(std::move(other.clients_))
+    remote_(std::move(other.remote_))
     {}
 
     virtual ~tcp_base()
@@ -80,133 +52,31 @@ public:
         base_type::operator=(std::forward<base_type>(other));
         local_ = std::move(other.local_);
         remote_ = std::move(other.remote_);
-        accept_cb_ = std::move(other.accept_cb_);
-        read_cb_ = std::move(other.read_cb_);
-        clients_ = std::move(other.clients_);
 
         return *this;
     }
 
-    void connect(const endpoint& to, connect_cb cb)
-    {
-        base_type::set_nonblocking();
-        remote_ = to;
-        local_ = to;
-        base_type::handler(tags::on_connect) = cb;
-
-        base_type::handler(tags::on_drain) = [&](Derived& h) {
-            // Socket is connected
-            callback_access::call<connected_tag>(*this);
-        };
-
-        base_type::start_write();
-
-        int rc = ::connect(base_type::fh(), remote_, remote_.size());
-
-        if (rc != 0 && errno != EINPROGRESS) {
-            base_type::handle_error("connect error", errno);
-            return;
-        }
-    }
-
-    const endpoint& serve(const endpoint& from, accept_cb acb, read_cb rcb)
-    {
-        local_ = from;
-        accept_cb_ = acb;
-        read_cb_ = rcb;
-
-        bool error = base_type::handle_error(
-            "bind error",
-            bind(base_type::fh(), local_, local_.size())
-        );
-
-        local_.set_from_local(base_type::fh());
-
-        error = error || base_type::handle_error(
-            "listen error",
-            listen(base_type::fh(), 128)
-        );
-
-        if (!error) {
-            base_type::set_nonblocking();
-
-            base_type::handler(tags::on_readable) = [&](Derived& h) {
-                // New connection
-                callback_access::call<connection_tag>(*this);
-            };
-
-            base_type::start_read(true);
-        }
-
-        return local_;
-    }
+    endpoint& local()
+    { return local_; }
 
     const endpoint& local() const
     { return local_; }
 
+    endpoint& remote()
+    { return remote_; }
+
     const endpoint& remote() const
     { return remote_; }
 
-private:
-    friend callback_access;
-
-    void operator()(const connected_tag& t)
+    void update_endpoints()
     {
-        set_shutdown_cb(base_type::derived());
         local_.set_from_local(base_type::fh());
         remote_.set_from_remote(base_type::fh());
-        base_type::handler(tags::on_connect)(base_type::derived());
-        base_type::handler(tags::on_connect) = nullptr;
-        base_type::start_read();
-        base_type::handler(tags::on_drain) = nullptr;
-    }
-
-    void operator()(const connection_tag& t)
-    {
-        endpoint r = local_;
-        uint32_t size = 0;
-
-        int fd = accept(base_type::fh(), r, &size);
-
-        if (fd == -1) {
-            base_type::handle_error("accept error", fd);
-        } else {
-            auto p = clients_.emplace(
-                std::piecewise_construct,
-                std::forward_as_tuple(r.str()),
-                std::forward_as_tuple(
-                    std::make_unique<Derived>(fd, local_, r)
-                )
-            );
-
-            auto& client = p.first->second;
-
-            set_shutdown_cb(*client);
-            client->handler(tags::on_read) = read_cb_;
-            client->start_read();
-            accept_cb_(*client);
-        }
-    }
-
-    void set_shutdown_cb(Derived& t)
-    {
-        t.handler(tags::on_stopped) = [](Derived& t) {
-            t.handle_error(
-                "shutdown",
-                shutdown(t.fh(), SHUT_WR)
-            );
-        };
     }
 
 private:
-    using client_ptr = std::unique_ptr<Derived>;
-    using client_map = std::unordered_map<std::string, client_ptr>;
-
     endpoint local_;
     endpoint remote_;
-    accept_cb accept_cb_;
-    read_cb read_cb_;
-    client_map clients_;
 };
 
 class tcp : public tcp_base<tcp>
@@ -215,6 +85,126 @@ class tcp : public tcp_base<tcp>
 
     using base_type::tcp_base;
 };
+
+template <typename Handle, typename Connected>
+Handle&
+connect(
+    Handle& h,
+    const endpoint& to,
+    Connected&& cb
+)
+{
+    h.set_nonblocking();
+    h.remote() = to;
+
+    h[tags::on_drain] = [cb = std::move(cb)](Handle& h) {
+        // Socket is writable (connected)
+        h.update_endpoints();
+        cb(h);
+        h.start_read();
+        h[tags::on_drain] = nullptr;
+    };
+
+    h.start_write();
+
+    int rc = ::connect(h.fh(), h.remote(), h.remote().size());
+
+    if (rc != 0 && errno != EINPROGRESS) {
+        handle_error(h, "connect error", errno);
+    }
+
+    return h;
+}
+
+template <typename Handle, typename Connected>
+Handle&
+connect(
+    const endpoint& to,
+    Connected&& cb
+)
+{
+    auto p = new_handle<Handle>();
+    auto& h = *p;
+
+    return connect(h, to, std::move(cb));
+}
+
+template <typename Handle, typename Accepted, typename Readable>
+const endpoint&
+serve(
+    Handle& h,
+    const endpoint& from,
+    Accepted&& accept_cb,
+    Readable&& read_cb
+)
+{
+    h.local() = from;
+
+    bool error = handle_error(
+        h,
+        "bind error",
+        bind(h.fh(), h.local(), h.local().size())
+    );
+
+    h.local().set_from_local(h.fh());
+
+    error = error || handle_error(
+        h,
+        "listen error",
+        listen(h.fh(), 128)
+    );
+
+    if (!error) {
+        h.set_nonblocking();
+
+        h[tags::on_readable] = [
+            accept_cb = std::move(accept_cb),
+            read_cb = std::move(read_cb)
+        ](Handle& h) {
+            // New connection
+            endpoint remote;
+            uint32_t size = 0;
+
+            int fd = ::accept(h.fh(), remote, &size);
+
+            if (fd == -1) {
+                handle_error(h, "accept error", fd);
+            } else {
+                auto cp = new_handle<Handle>(fd);
+                auto& c = *cp;
+
+                c[tags::on_stopped] = [](Handle& c) {
+                    handle_error(
+                        c,
+                        "shutdown",
+                        shutdown(c.fh(), SHUT_WR)
+                    );
+                };
+                c[tags::on_read] = std::move(read_cb);
+                c.start_read();
+                accept_cb(c);
+            }
+        };
+
+        h.start_read(true);
+    }
+
+    return h.local();
+}
+
+template <typename Handle, typename Accepted, typename Readable>
+const endpoint&
+serve(
+    const endpoint& from,
+    Accepted&& accept_cb,
+    Readable&& read_cb
+)
+{
+    auto p = new_handle<Handle>();
+    auto& h = *p;
+
+    return serve(h, from, std::move(accept_cb), std::move(read_cb));
+}
 
 } // namesapce nx
 

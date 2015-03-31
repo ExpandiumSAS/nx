@@ -8,8 +8,8 @@ http::http()
 parsed_(false)
 {}
 
-http::http(int fh, const endpoint& local, const endpoint& remote)
-: base_type(fh, local, remote),
+http::http(int fh)
+: base_type(fh),
 parsed_(false)
 {}
 
@@ -104,45 +104,77 @@ http::send_request()
     *this << req_.content();
 }
 
+http&
+http::operator<<(request_cb cb)
+{
+    request_cb_ = std::move(cb);
+
+    return *this;
+}
+
+http&
+http::operator<<(request req)
+{
+    req_ = std::move(req);
+
+    return *this;
+}
+
+http&
+http::operator<<(reply_cb cb)
+{
+    reply_cb_ = std::move(cb);
+
+    return *this;
+}
+
+http&
+http::operator<<(reply rep)
+{
+    rep_ = std::move(rep);
+
+    return *this;
+}
+
 const endpoint&
-http::operator()(
-    const endpoint& ep,
-    const std::string& root,
-    request_cb cb
-)
+serve(http& h, const endpoint& ep, request_cb cb)
 {
     return
-        base_type::serve(
+        serve(
+            h,
             ep,
-            [cb](nx::http& c) {
-                c.request_cb_ = cb;
+            [cb = std::move(cb)](http& c) {
+                c << std::move(cb);
             },
-            [](nx::http& t) {
-                t.process_request();
+            [](http& c) {
+                c.process_request();
             }
         );
 }
 
-void
-http::operator()(
-    const endpoint& ep,
-    request&& req,
-    reply_cb cb
-)
+http&
+connect(const endpoint& ep, request req, reply_cb cb)
 {
-    req_ = std::move(req);
-    reply_cb_ = cb;
+    auto p = new_handle<http>();
+    auto& h = *p;
 
-    handler(tags::on_read) = [](http& t) {
+    h
+        << std::move(req)
+        << std::move(cb)
+        ;
+
+    h[tags::on_read] = [](http& t) {
         t.process_reply();
     };
 
-    base_type::connect(
-        ep,
-        [](http& t) {
-            t.send_request();
-        }
-    );
+    return
+        connect(
+            h,
+            ep,
+            [](http& t) {
+                t.send_request();
+            }
+        );
 }
 
 } // namespace nx
