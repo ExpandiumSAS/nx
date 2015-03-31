@@ -152,6 +152,7 @@ private:
 
     void operator()(const connected_tag& t)
     {
+        set_shutdown_cb(base_type::derived());
         local_.set_from_local(base_type::fh());
         remote_.set_from_remote(base_type::fh());
         base_type::handler(tags::on_connect)(base_type::derived());
@@ -180,10 +181,21 @@ private:
 
             auto& client = p.first->second;
 
+            set_shutdown_cb(*client);
             client->handler(tags::on_read) = read_cb_;
             client->start_read();
             accept_cb_(*client);
         }
+    }
+
+    void set_shutdown_cb(Derived& t)
+    {
+        t.handler(tags::on_stopped) = [](Derived& t) {
+            t.handle_error(
+                "shutdown",
+                shutdown(t.fh(), SHUT_WR)
+            );
+        };
     }
 
 private:

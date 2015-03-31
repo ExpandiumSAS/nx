@@ -3,6 +3,7 @@
 
 #include <nx/config.h>
 #include <nx/watcher_base.hpp>
+#include <nx/cond_var.hpp>
 
 namespace nx {
 
@@ -21,6 +22,20 @@ public:
 
     virtual void stop() noexcept
     { async() << [&](evloop el) { ev_io_stop(el, ptr()); }; }
+
+    virtual void sync_stop() noexcept
+    {
+        cond_var stopped;
+
+        async() << [&](evloop el) {
+            ev_io_stop(el, ptr());
+            std::cout << std::this_thread::get_id() << " NOTIFY" << std::endl;
+            stopped.notify();
+        };
+
+        std::cout << std::this_thread::get_id() << " WAIT" << std::endl;
+        stopped.wait();
+    }
 
     io& operator()(int fd, int events) noexcept
     {

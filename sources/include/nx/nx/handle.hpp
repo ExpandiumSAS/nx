@@ -27,6 +27,7 @@ struct on_read_tag : callback_tag {};
 struct on_readable_tag : callback_tag {};
 struct on_drain_tag : callback_tag {};
 struct on_eof_tag : callback_tag {};
+struct on_stopped_tag : callback_tag {};
 struct on_closed_tag : callback_tag {};
 
 const on_error_tag on_error = {};
@@ -34,6 +35,7 @@ const on_read_tag on_read = {};
 const on_readable_tag on_readable = {};
 const on_drain_tag on_drain = {};
 const on_eof_tag on_eof = {};
+const on_stopped_tag on_stopped = {};
 const on_closed_tag on_closed = {};
 
 } // namespace tags
@@ -49,6 +51,7 @@ public:
         callback<tags::on_readable_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
         callback<tags::on_eof_tag, Derived&>,
+        callback<tags::on_stopped_tag, Derived&>,
         callback<tags::on_closed_tag, Derived&>,
         Callbacks...
     >;
@@ -354,13 +357,10 @@ private:
             return;
         }
 
-        handle_error(
-            "shutdown",
-            shutdown(fh_, SHUT_WR)
-        );
-
-        io_.stop();
         closed_ = true;
+
+        io_.sync_stop();
+        handler(tags::on_stopped)(derived());
         handler(tags::on_closed)(derived());
     }
 

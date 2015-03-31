@@ -46,6 +46,7 @@ loop::start()
 {
     t_ = std::thread(
         [this]() {
+            std::cout << std::this_thread::get_id() << " LOOP" << std::endl;
             ev_loop_fork(l_);
 
             while (!stop_.load()) {
