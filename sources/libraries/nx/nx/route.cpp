@@ -16,7 +16,7 @@ route::operator/(const char* path)
 }
 
 route&
-route::operator/(std::string& path)
+route::operator/(const std::string& path)
 {
     path_ += '/';
     path_ += path;

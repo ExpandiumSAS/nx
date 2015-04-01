@@ -8,6 +8,7 @@
 
 #include <nx/json.hpp>
 #include <nx/http.hpp>
+#include <nx/route.hpp>
 
 namespace nx {
 
@@ -33,15 +34,32 @@ public:
     using value_type = T;
     using id_type = decltype(std::declval<T&>().id);
     using next_id_type = next_id<id_type>;
-    using collection_type = std::unordered_map<id_type, value_type>;
+    using values_type = std::unordered_map<id_type, value_type>;
 
     json_collection(const std::string& path)
     : path_(path),
     id_(0)
     {}
 
+    static jsonv::formats format()
+    {
+        return
+            jsonv::formats_builder()
+            .register_container<values_type>()
+            ;
+    }
+
+    const std::string& path() const
+    { return path_; }
+
+    values_type& get()
+    { return c_; }
+
+    const values_type& get() const
+    { return c_; }
+
     // Return the whole collection
-    request_cb GET(const collection_tag& t)
+    route_cb GET(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             rep << json(c_);
@@ -49,7 +67,7 @@ public:
     }
 
     // Replace the whole collection
-    request_cb PUT(const collection_tag& t)
+    route_cb PUT(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             c_.clear();
@@ -58,11 +76,11 @@ public:
     }
 
     // Create a new item
-    request_cb POST(const collection_tag& t)
+    route_cb POST(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             auto id = next_id_(id_);
-            auto p = c_.emplace(id, value_type{});
+            c_.emplace(id, value_type{});
 
             rep
                 << Created
@@ -71,7 +89,7 @@ public:
         };
     }
 
-    request_cb DELETE(const collection_tag& t)
+    route_cb DELETE(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             c_.clear();
@@ -79,7 +97,7 @@ public:
     }
 
     // Return an item
-    request_cb GET(const item_tag& t)
+    route_cb GET(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             auto id = nx::to_num<id_type>(req.a("id"));
@@ -95,7 +113,7 @@ public:
     }
 
     // Return an item
-    request_cb PUT(const item_tag& t)
+    route_cb PUT(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             auto id = nx::to_num<id_type>(req.a("id"));
@@ -109,7 +127,7 @@ public:
     }
 
     // Return an item
-    request_cb DELETE(const item_tag& t)
+    route_cb DELETE(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
             auto id = nx::to_num<id_type>(req.a("id"));
@@ -122,7 +140,7 @@ private:
     std::string path_;
     id_type id_;
     next_id_type next_id_;
-    collection_type c_;
+    values_type c_;
 };
 
 } // namespace nx

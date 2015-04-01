@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include <ostream>
+
 #include <nx/config.h>
 
 namespace nx {
@@ -30,6 +32,15 @@ const reply_code NonAuthoritativeInformation = {
 const reply_code NoContent = { 204, "No Content" };
 const reply_code ResetContent = { 205, "Reset Content" };
 const reply_code PartialContent = { 206, "Partial Content" };
+
+inline
+std::ostream&
+operator<<(std::ostream& os, const reply_code& c)
+{
+    os << c.code << " " << c.status;
+
+    return os;
+}
 
 } // namespace nx
 

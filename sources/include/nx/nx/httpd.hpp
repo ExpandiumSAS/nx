@@ -26,18 +26,17 @@ public:
         // Operations on the whole collection
         collection_tag ct;
 
-        me(GET) / c.path = c.GET(ct);
-        me(PUT) / c.path = c.PUT(ct);
-        me(POST) / c.path = c.POST(ct);
-        me(DELETE) / c.path = c.DELETE(ct);
+        me(GET) / c.path() = c.GET(ct);
+        me(PUT) / c.path() = c.PUT(ct);
+        me(POST) / c.path() = c.POST(ct);
+        me(DELETE) / c.path() = c.DELETE(ct);
 
         // Operations on a specific item
         item_tag it;
 
-        me(GET) / c.path / ":id" = c.GET(it);
-        me(PUT) / c.path / ":id" = c.PUT(it);
-        me(POST) / c.path / ":id" = c.POST(it);
-        me(DELETE) / c.path / ":id" = c.DELETE(it);
+        me(GET) / c.path() / ":id" = c.GET(it);
+        me(PUT) / c.path() / ":id" = c.PUT(it);
+        me(DELETE) / c.path() / ":id" = c.DELETE(it);
 
         return me;
     }

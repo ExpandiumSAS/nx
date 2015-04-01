@@ -13,15 +13,15 @@
 
 namespace nx {
 
+using route_cb = std::function<
+    void(const request& req, buffer& data, reply& rep)
+>;
+
 class NX_API route
 {
 public:
-    using route_cb = std::function<
-        void(const request& req, buffer& data, reply& rep)
-    >;
-
     route& operator/(const char* path);
-    route& operator/(std::string& path);
+    route& operator/(const std::string& path);
     route& operator=(route_cb cb);
 
     const std::string& path() const;
