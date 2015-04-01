@@ -7,8 +7,7 @@
 namespace nx {
 
 reply::reply()
-: code_(200),
-status_("OK"),
+: code_(OK),
 content_length_(0)
 {}
 
@@ -21,8 +20,7 @@ reply::~reply()
 reply&
 reply::operator=(reply&& other)
 {
-    code_ = other.code_;
-    status_ = std::move(other.status_);
+    code_ = std::move(other.code_);
     content_length_ = other.content_length_;
     headers_ = std::move(other.headers_);
     data_.str(std::move(other.data_.str()));
@@ -37,17 +35,8 @@ reply::operator=(reply&& other)
     return *this;
 }
 
-reply&
-reply::operator=(const error& e)
-{
-    code_ = e.code();
-    status_ = e.what();
-
-    return *this;
-}
-
 reply::operator bool() const
-{ return code_ == 200; }
+{ return code_.code == 200; }
 
 bool
 reply::parse(buffer& b)
@@ -70,8 +59,8 @@ reply::parse(buffer& b)
 
     if (ret > 0) {
         parsed = true;
-        code_ = (code_type) raw_status_;
-        status_.assign(raw_msg_, raw_msg_len_);
+        code_.code = (code_type) raw_status_;
+        code_.status.assign(raw_msg_, raw_msg_len_);
 
         for (std::size_t i = 0; i < num_headers_; i++) {
             auto& h = raw_headers_ptr_.get()[i];
@@ -104,13 +93,9 @@ std::size_t
 reply::content_length() const
 { return content_length_; }
 
-code_type
+const reply_code&
 reply::code() const
 { return code_; }
-
-const std::string&
-reply::status() const
-{ return status_; }
 
 std::string&
 reply::h(const std::string& name)
@@ -135,13 +120,46 @@ reply::content() const
     hdrs << header(nx::content_length, body.size());
 
     oss
-        << "HTTP/1.1 " << code_ << " " << status_ << "\r\n"
+        << "HTTP/1.1 "
+        << code_.code << " " << code_.status << "\r\n"
         << hdrs
         << "\r\n"
         << body
         ;
 
     return oss.str();
+}
+
+bool
+reply::operator==(const reply_code& rc) const
+{ return code_ == rc; }
+
+bool
+reply::operator!=(const reply_code& rc) const
+{ return !(*this == rc); }
+
+bool
+reply::operator==(const error& e) const
+{ return code_.code == e.code(); }
+
+bool
+reply::operator!=(const error& e) const
+{ return !(*this == e); }
+
+reply&
+reply::operator<<(const reply_code& rc)
+{
+    code_ = rc;
+
+    return *this;
+}
+
+reply&
+reply::operator<<(const error& e)
+{
+    code_ = reply_code{ e.code(), e.what() };
+
+    return *this;
 }
 
 reply&

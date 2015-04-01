@@ -7,18 +7,7 @@
 #include <nx/nx.hpp>
 #include <nx/utils.hpp>
 
-struct person {
-    std::string name;
-    std::size_t age;
-};
-
-auto person_fmt =
-    jsonv::formats_builder()
-    .type<person>()
-        .member("name", &person::name)
-        .member("age", &person::age)
-    .check_references(jsonv::formats::defaults())
-    ;
+#include "person.hpp"
 
 BOOST_AUTO_TEST_CASE(httpd_json)
 {
@@ -38,11 +27,11 @@ BOOST_AUTO_TEST_CASE(httpd_json)
         deadlines[i].start();
     }
 
-    add_json_format<person>(person_fmt);
+    add_json_format<test::person>(test::person_fmt);
 
     auto ep = endpoint("127.0.0.1");
 
-    person p{ "John Doe", 42 };
+    test::person p{ 1234, "John Doe", 42 };
 
     httpd hd;
 
@@ -59,7 +48,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
         got_put_request = true;
 
         auto id = nx::to_num<std::size_t>(req.a("id"));
-        person tp;
+        test::person tp;
 
         json(data) >> tp;
 
@@ -77,7 +66,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
 
     hc(GET, sep) / "hello" = [&](const reply& rep, buffer& data) {
         got_get_reply = true;
-        person tp;
+        test::person tp;
 
         json(data) >> tp;
 

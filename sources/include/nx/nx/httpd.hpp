@@ -7,6 +7,7 @@
 #include <nx/http.hpp>
 #include <nx/methods.hpp>
 #include <nx/route.hpp>
+#include <nx/json_collection.hpp>
 
 namespace nx {
 
@@ -16,6 +17,30 @@ public:
     route& operator()(const method& m);
 
     const endpoint& operator()(const endpoint& ep);
+
+    template <typename T>
+    httpd& operator<<(json_collection<T> c)
+    {
+        auto& me = *this;
+
+        // Operations on the whole collection
+        collection_tag ct;
+
+        me(GET) / c.path = c.GET(ct);
+        me(PUT) / c.path = c.PUT(ct);
+        me(POST) / c.path = c.POST(ct);
+        me(DELETE) / c.path = c.DELETE(ct);
+
+        // Operations on a specific item
+        item_tag it;
+
+        me(GET) / c.path / ":id" = c.GET(it);
+        me(PUT) / c.path / ":id" = c.PUT(it);
+        me(POST) / c.path / ":id" = c.POST(it);
+        me(DELETE) / c.path / ":id" = c.DELETE(it);
+
+        return me;
+    }
 
 private:
     void operator()(request& req, buffer& data, reply& rep);

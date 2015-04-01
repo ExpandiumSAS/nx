@@ -83,6 +83,35 @@ join(const std::string& sep, const std::vector<S>& v)
 }
 
 template <typename T>
+struct make_vector {
+    typedef std::vector<T> vector_type;
+
+    static
+    void make(vector_type& v)
+    {}
+
+    template <typename Item, typename... Items>
+    static
+    void make(vector_type& v, Item& i, Items... items)
+    {
+        std::ostringstream oss;
+        oss << i;
+        v.push_back(oss.str());
+        make(v, items...);
+    }
+};
+
+template <typename... Args>
+std::string
+join(const std::string& sep, Args... args)
+{
+    std::vector<std::string> v;
+    make_vector<std::string>::make(v, args...);
+
+    return join(sep, v);
+}
+
+template <typename T>
 inline
 T to_num(const std::string& s)
 {

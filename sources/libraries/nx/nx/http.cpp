@@ -73,7 +73,7 @@ http::process_request()
         // All data arrived, call upper handler
         request_cb_(req_, rbuf(), rep_);
     } catch (const error& e) {
-        rep_ = e;
+        rep_ << e;
     }
 
     *this << rep_.content();
@@ -89,7 +89,7 @@ http::process_reply()
             return;
         }
     } catch (const error& e) {
-        rep_ = e;
+        rep_ << e;
     }
 
     // All data arrived, call upper handler
