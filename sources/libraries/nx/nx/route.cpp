@@ -3,6 +3,7 @@
 #include <nx/route.hpp>
 #include <nx/utils.hpp>
 #include <nx/attributes.hpp>
+#include <nx/utils.hpp>
 
 namespace nx {
 
@@ -11,6 +12,7 @@ route::operator/(const char* path)
 {
     path_ += '/';
     path_ += path;
+    clean_path();
 
     return *this;
 }
@@ -20,6 +22,7 @@ route::operator/(const std::string& path)
 {
     path_ += '/';
     path_ += path;
+    clean_path();
 
     return *this;
 }
@@ -80,5 +83,9 @@ route::match(request& req) const
 void
 route::operator()(const request& req, buffer& data, reply& rep) const
 { route_cb_(req, data, rep); }
+
+void
+route::clean_path()
+{ path_ = nx::clean_path(path_); }
 
 } // namespace nx

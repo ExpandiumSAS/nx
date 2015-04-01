@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     using namespace nx;
 
     // Configure a deadline timer for each test
-    const std::size_t deadline_count = 2;
+    const std::size_t deadline_count = 3;
 
     nx::timer deadlines[deadline_count];
     nx::cond_var cvs[deadline_count];
@@ -48,8 +48,6 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     httpc hc;
 
     bool item_not_found = false;
-    bool got_collection = false;
-    bool empty_collection = false;
 
     hc(GET, sep) / "persons/1234" = [&](const reply& rep, buffer& data) {
         item_not_found = (rep == not_found());
@@ -57,6 +55,9 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
         deadlines[0].stop();
         cvs[0].notify();
     };
+
+    bool got_collection = false;
+    bool empty_collection = false;
 
     hc(GET, sep) / "persons" = [&](const reply& rep, buffer& data) {
         got_collection = (rep == OK);
@@ -68,6 +69,17 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
         deadlines[1].stop();
         cvs[1].notify();
+    };
+
+    bool item_created = false;
+
+    hc(POST, sep) / "persons" = [&](const reply& rep, buffer& data) {
+        item_created = (rep == Created);
+
+        std::cout << "Location: " << rep.h(location_lc) << std::endl;
+
+        deadlines[2].stop();
+        cvs[2].notify();
     };
 
     for (std::size_t i = 0; i < deadline_count; i++) {

@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cctype>
 #include <algorithm>
 
@@ -154,7 +155,7 @@ request::content() const
     }
 
     oss
-        << method_ << " " << path_ << " HTTP/1.1\r\n"
+        << method_ << " " << clean_path(path_) << " HTTP/1.1\r\n"
         << hdrs
         << "\r\n"
         ;

@@ -31,6 +31,8 @@ public:
     void operator()(const request& req, buffer& data, reply& rep) const;
 
 private:
+    void clean_path();
+
     std::string path_;
     route_cb route_cb_;
 };

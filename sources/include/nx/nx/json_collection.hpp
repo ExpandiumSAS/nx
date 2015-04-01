@@ -9,6 +9,7 @@
 #include <nx/json.hpp>
 #include <nx/http.hpp>
 #include <nx/route.hpp>
+#include <nx/utils.hpp>
 
 namespace nx {
 
@@ -37,7 +38,7 @@ public:
     using values_type = std::unordered_map<id_type, value_type>;
 
     json_collection(const std::string& path)
-    : path_(path),
+    : path_(clean_path(path)),
     id_(0)
     {}
 
@@ -58,7 +59,6 @@ public:
     const values_type& get() const
     { return c_; }
 
-    // Return the whole collection
     route_cb GET(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
@@ -66,7 +66,6 @@ public:
         };
     }
 
-    // Replace the whole collection
     route_cb PUT(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
@@ -75,7 +74,6 @@ public:
         };
     }
 
-    // Create a new item
     route_cb POST(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
@@ -84,7 +82,7 @@ public:
 
             rep
                 << Created
-                << header{ "Location", join("/", path_, id) }
+                << header{ location, join("/", path_, id) }
                 ;
         };
     }
@@ -96,7 +94,6 @@ public:
         };
     }
 
-    // Return an item
     route_cb GET(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
@@ -112,7 +109,6 @@ public:
         };
     }
 
-    // Return an item
     route_cb PUT(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
@@ -126,7 +122,6 @@ public:
         };
     }
 
-    // Return an item
     route_cb DELETE(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {

@@ -14,6 +14,8 @@ const std::string content_length = "Content-Length";
 const std::string content_length_lc = "content-length";
 const std::string content_disposition = "Content-Disposition";
 const std::string content_disposition_lc = "content-disposition";
+const std::string location = "Location";
+const std::string location_lc = "location";
 
 class NX_API headers : public attribute_map
 {

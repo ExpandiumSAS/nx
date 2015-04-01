@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include <string>
+#include <sstream>
 #include <vector>
 #include <regex>
 #include <typeinfo>
@@ -52,6 +53,10 @@ match(const std::string& expr, const std::string& re, std::smatch& m);
 NX_API
 std::string
 subst(const std::string& s, const std::string& re, const std::string& what);
+
+NX_API
+std::string
+clean_path(const std::string& path);
 
 inline
 strings

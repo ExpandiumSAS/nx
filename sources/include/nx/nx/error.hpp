@@ -5,8 +5,10 @@
 
 #include <stdexcept>
 
+#include <nx/config.h>
+
 #define NX_MAKE_ERROR(NAME, CODE, MSG) \
-class NAME : public error \
+class NX_API NAME : public error \
 { \
 public: \
     explicit NAME() \
@@ -21,7 +23,7 @@ namespace nx {
 
 using code_type = uint16_t;
 
-class error : public std::runtime_error
+class NX_API error : public std::runtime_error
 {
 public:
     explicit error(code_type code, const std::string& msg)

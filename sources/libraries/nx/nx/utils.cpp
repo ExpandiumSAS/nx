@@ -86,4 +86,23 @@ subst(const std::string& s, const std::string& re, const std::string& what)
     );
 }
 
+std::string
+clean_path(const std::string& path)
+{
+    // Note: simpler char-based algorithms will not work with UTF8 data...
+    std::string cleaned;
+    auto parts = split("/", path);
+
+    for (const auto& part : parts) {
+        if (part.empty()) {
+            continue;
+        }
+
+        cleaned += '/';
+        cleaned += part;
+    }
+
+    return cleaned;
+}
+
 } // namespace nx
