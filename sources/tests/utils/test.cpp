@@ -26,6 +26,6 @@ BOOST_AUTO_TEST_CASE(escape)
 
     BOOST_CHECK_THROW(
         nx::uri("some junk text"),
-        std::runtime_error
+        nx::http_status
     );
 }

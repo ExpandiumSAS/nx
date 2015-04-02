@@ -73,7 +73,6 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
     hc(POST, sep)
         / "persons"
-        << attribute{ "pouet", "proot" }
         << json(test::person{ 42, "Bart Simpson", 15 })
         = [&](const reply& rep, buffer& data) {
             item_created = (rep == Created);
@@ -87,8 +86,6 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
                     [&](const reply& rep, buffer& data) {
                         item_with_id_found = (rep == OK);
                         test::person p;
-
-                        std::cout << "P: " << data << std::endl;
 
                         json(data) >> p;
 
