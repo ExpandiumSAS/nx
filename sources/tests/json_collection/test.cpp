@@ -9,24 +9,22 @@
 
 #include "../json/person.hpp"
 
+// Configure a deadline timer for each test
+const std::size_t test_count = 4;
+
+nx::timer deadline;
+nx::cond_var cv(test_count);
+
 BOOST_AUTO_TEST_CASE(httpd_json_collection)
 {
     using namespace nx;
 
-    // Configure a deadline timer for each test
-    const std::size_t deadline_count = 3;
+    deadline(10.0) = [&](nx::timer& t, int events) {
+        t.stop();
+        cv.notify_all();
+    };
 
-    nx::timer deadlines[deadline_count];
-    nx::cond_var cvs[deadline_count];
-
-    for (std::size_t i = 0; i < deadline_count; i++) {
-        deadlines[i](10.0) = [&](nx::timer& t, int events) {
-            t.stop();
-            cvs[i].notify();
-        };
-
-        deadlines[i].start();
-    }
+    deadline.start();
 
     using collection_type = json_collection<test::person>;
     using persons = collection_type::values_type;
@@ -52,8 +50,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     hc(GET, sep) / "persons/1234" = [&](const reply& rep, buffer& data) {
         item_not_found = (rep == NotFound);
 
-        deadlines[0].stop();
-        cvs[0].notify();
+        cv.notify();
     };
 
     bool got_collection = false;
@@ -67,22 +64,62 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
         empty_collection = p.empty();
 
-        deadlines[1].stop();
-        cvs[1].notify();
+        cv.notify();
     };
 
     bool item_created = false;
+    bool item_has_id = false;
+    bool item_with_id_found = false;
 
     hc(POST, sep) / "persons" = [&](const reply& rep, buffer& data) {
         item_created = (rep == Created);
 
-        deadlines[2].stop();
-        cvs[2].notify();
+        auto parts = split("/", rep.h(location));
+
+        if (!parts.empty()) {
+            item_has_id = true;
+
+            hc(GET, sep) / "persons" / parts.back() =
+                [&](const reply& rep, buffer& data) {
+                    item_with_id_found = (rep == OK);
+                    test::person p;
+
+                    std::cout << "P: " << data << std::endl;
+
+                    json(data) >> p;
+
+                    cv.notify();
+                };
+        }
+
+        cv.notify();
     };
 
-    for (std::size_t i = 0; i < deadline_count; i++) {
-        cvs[i].wait();
-    }
-
+    cv.wait();
     nx::stop();
+
+    BOOST_CHECK_MESSAGE(
+        item_not_found,
+        "non-existent item was not found"
+    );
+    BOOST_CHECK_MESSAGE(
+        got_collection,
+        "got a collection"
+    );
+    BOOST_CHECK_MESSAGE(
+        empty_collection,
+        "intial collection is empty"
+    );
+    BOOST_CHECK_MESSAGE(
+        item_created,
+        "a new item was created"
+    );
+    BOOST_CHECK_MESSAGE(
+        item_has_id,
+        "new item has an id"
+    );
+    BOOST_CHECK_MESSAGE(
+        item_with_id_found,
+        "new item with id was found"
+    );
 }

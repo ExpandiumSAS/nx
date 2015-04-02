@@ -75,6 +75,7 @@ http::process_request()
     } catch (const http_status& s) {
         rep_ << s;
     } catch (const std::exception& e) {
+        std::cout << "NotFound by " << e.what() << std::endl;
         rep_ << NotFound;
     }
 

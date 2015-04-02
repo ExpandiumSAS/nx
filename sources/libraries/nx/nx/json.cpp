@@ -1,4 +1,5 @@
 #include <nx/json.hpp>
+#include <nx/http_status.hpp>
 
 namespace nx {
 
@@ -22,8 +23,12 @@ json::json(buffer& b)
 {
     std::string js;
 
-    b >> js;
-    v_ = jsonv::parse(js);
+    try {
+        b >> js;
+        v_ = jsonv::parse(js);
+    } catch (const jsonv::parse_error& e) {
+        throw BadRequest;
+    }
 }
 
 void

@@ -7,7 +7,7 @@
 #include <functional>
 #include <unordered_set>
 
-#include <moodycamel/concurrentqueue.hpp>
+#include <moodycamel/concurrent_queue.hpp>
 
 #include <nx/config.h>
 #include <nx/ev.hpp>
@@ -56,7 +56,7 @@ private:
     loop& enqueue(loop_op&& op);
 
 private:
-    using queue_type = moodycamel::ConcurrentQueue<loop_op>;
+    using queue_type = moodycamel::concurrent_queue<loop_op>;
 
     evloop l_;
     struct ev_async async_w_;

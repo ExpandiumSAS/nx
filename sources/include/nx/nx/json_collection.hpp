@@ -80,10 +80,14 @@ public:
             auto id = next_id_(id_);
             value_type item;
 
-            json(data) >> item;
+            if (!data.empty()) {
+                json(data) >> item;
+            }
 
             item.id = id;
             c_.emplace(id, item);
+
+            std::cout << "new item with " << id << std::endl;
 
             rep
                 << Created
@@ -104,10 +108,16 @@ public:
         return [&](const request& req, buffer& data, reply& rep) {
             auto id = nx::to_num<id_type>(req.a("id"));
 
+            std::cout << "GET item " << id << std::endl;
+
+            for (const auto& p : c_) {
+                std::cout << "I have " << p.first << std::endl;
+            }
+
             auto it = c_.find(id);
 
             if (it != c_.end()) {
-                rep << json(*it);
+                rep << json(it->second);
             } else {
                 rep << NotFound;
             }

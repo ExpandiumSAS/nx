@@ -11,14 +11,17 @@ namespace nx {
 class NX_API cond_var
 {
 public:
-    cond_var();
+    cond_var(std::size_t count = 1);
 
     void notify();
+    void notify_all();
     void wait();
 
 private:
     using mutex_type = std::recursive_mutex;
 
+    std::size_t cur_ = 0;
+    std::size_t count_ = 1;
     bool ready_ = false;
     mutex_type m_;
     std::condition_variable_any cv_;
