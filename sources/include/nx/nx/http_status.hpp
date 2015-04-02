@@ -9,7 +9,7 @@
 
 namespace nx {
 
-struct http_status
+struct NX_API http_status
 {
     using code_type = uint16_t;
 
