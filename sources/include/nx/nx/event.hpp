@@ -7,22 +7,22 @@ namespace nx {
 
 enum
 {
-    UNDEF    = EV_UNDEF,
-    NONE     = EV_NONE,
-    READ     = EV_READ,
-    WRITE    = EV_WRITE,
-    TIMER    = EV_TIMER,
-    PERIODIC = EV_PERIODIC,
-    SIGNAL   = EV_SIGNAL,
-    CHILD    = EV_CHILD,
-    STAT     = EV_STAT,
-    IDLE     = EV_IDLE,
-    CHECK    = EV_CHECK,
-    PREPARE  = EV_PREPARE,
-    FORK     = EV_FORK,
-    ASYNC    = EV_ASYNC,
-    EMBED    = EV_EMBED,
-    ERROR    = EV_ERROR
+    NX_UNDEF    = EV_UNDEF,
+    NX_NONE     = EV_NONE,
+    NX_READ     = EV_READ,
+    NX_WRITE    = EV_WRITE,
+    NX_TIMER    = EV_TIMER,
+    NX_PERIODIC = EV_PERIODIC,
+    NX_SIGNAL   = EV_SIGNAL,
+    NX_CHILD    = EV_CHILD,
+    NX_STAT     = EV_STAT,
+    NX_IDLE     = EV_IDLE,
+    NX_CHECK    = EV_CHECK,
+    NX_PREPARE  = EV_PREPARE,
+    NX_FORK     = EV_FORK,
+    NX_ASYNC    = EV_ASYNC,
+    NX_EMBED    = EV_EMBED,
+    NX_ERROR    = EV_ERROR
 };
 
 } // namespace nx

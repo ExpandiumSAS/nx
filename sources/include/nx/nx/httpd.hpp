@@ -19,7 +19,7 @@ public:
     const endpoint& operator()(const endpoint& ep);
 
     template <typename T>
-    httpd& operator<<(json_collection<T> c)
+    httpd& operator<<(json_collection<T>& c)
     {
         auto& me = *this;
 

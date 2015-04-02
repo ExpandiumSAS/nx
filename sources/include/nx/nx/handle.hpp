@@ -134,7 +134,7 @@ public:
 
         closing_ = true;
 
-        io_ ^= READ;
+        io_ ^= NX_READ;
 
         start_write();
     }
@@ -215,7 +215,7 @@ public:
     void start_read(bool notify_only = false)
     {
         notify_only_ = notify_only;
-        io_ |= READ;
+        io_ |= NX_READ;
         io_.start();
     }
 
@@ -224,7 +224,7 @@ public:
         if (wq_.empty() && closing_) {
             close();
         } else {
-            io_ |= WRITE;
+            io_ |= NX_WRITE;
             io_.start();
         }
     }
@@ -265,16 +265,16 @@ private:
     void set_io_cb()
     {
         io_ = [&](int events) {
-            if (events & ERROR) {
+            if (events & NX_ERROR) {
                 handle_error(derived(), "read/write error", errno);
                 return;
             }
 
-            if (events & READ) {
+            if (events & NX_READ) {
                 handle_read();
             }
 
-            if (events & WRITE) {
+            if (events & NX_WRITE) {
                 handle_write();
             }
         };
@@ -325,7 +325,7 @@ private:
             if (closing_) {
                 close();
             } else {
-                io_ ^= WRITE;
+                io_ ^= NX_WRITE;
                 handler(tags::on_drain)(derived());
             }
 

@@ -42,6 +42,10 @@ split(const std::string& re, const std::string& expr, strings& list)
 {
     list.clear();
 
+    if (expr.empty()) {
+        return;
+    }
+
     std::regex delim(re);
 
     auto cur = std::sregex_token_iterator(
