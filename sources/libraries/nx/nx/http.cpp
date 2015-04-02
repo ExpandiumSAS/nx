@@ -72,10 +72,10 @@ http::process_request()
 
         // All data arrived, call upper handler
         request_cb_(req_, rbuf(), rep_);
-    } catch (const error& e) {
-        rep_ << e;
+    } catch (const http_status& s) {
+        rep_ << s;
     } catch (const std::exception& e) {
-        rep_ << not_found();
+        rep_ << NotFound;
     }
 
     *this << rep_.content();
@@ -90,8 +90,10 @@ http::process_reply()
             // Wait until response is complete
             return;
         }
-    } catch (const error& e) {
-        rep_ << e;
+    } catch (const http_status& s) {
+        rep_ << s;
+    } catch (const std::exception& e) {
+        rep_ << NotFound;
     }
 
     // All data arrived, call upper handler

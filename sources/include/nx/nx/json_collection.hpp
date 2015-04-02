@@ -109,7 +109,7 @@ public:
             if (it != c_.end()) {
                 rep << json(*it);
             } else {
-                throw not_found();
+                rep << NotFound;
             }
         };
     }

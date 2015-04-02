@@ -34,7 +34,7 @@ httpd::operator()(request& req, buffer& data, reply& rep)
 
     if (it == routes_map_.end()) {
         // No handlers declared for this method
-        throw not_found();
+        throw NotFound;
     }
 
     auto& routes = it->second;
@@ -53,7 +53,7 @@ httpd::operator()(request& req, buffer& data, reply& rep)
     }
 
     if (!matched) {
-        throw not_found();
+        throw NotFound;
     } else if (matches.size() > 1) {
         std::cerr
             << "WHOAA: more than one route matched: " << req.path() << "\n"

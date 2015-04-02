@@ -2,7 +2,7 @@
 
 #include <nx/uri.hpp>
 #include <nx/escape.hpp>
-#include <nx/error.hpp>
+#include <nx/http_status.hpp>
 #include <nx/regexp/http.hpp>
 #include <nx/utils.hpp>
 
@@ -78,7 +78,7 @@ uri::parse(const std::string& u)
         // Only HTTP path
         pos = 3;
     } else {
-        throw bad_request();
+        throw BadRequest;
     }
 
     path_ = "/" + m[pos++].str();

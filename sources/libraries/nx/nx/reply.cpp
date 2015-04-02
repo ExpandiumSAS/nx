@@ -7,7 +7,7 @@
 namespace nx {
 
 reply::reply()
-: code_(OK),
+: status_(OK),
 content_length_(0)
 {}
 
@@ -20,7 +20,7 @@ reply::~reply()
 reply&
 reply::operator=(reply&& other)
 {
-    code_ = std::move(other.code_);
+    status_ = std::move(other.status_);
     content_length_ = other.content_length_;
     headers_ = std::move(other.headers_);
     data_.str(std::move(other.data_.str()));
@@ -36,7 +36,7 @@ reply::operator=(reply&& other)
 }
 
 reply::operator bool() const
-{ return code_.code == 200; }
+{ return status_.code == 200; }
 
 bool
 reply::parse(buffer& b)
@@ -59,8 +59,8 @@ reply::parse(buffer& b)
 
     if (ret > 0) {
         parsed = true;
-        code_.code = (code_type) raw_status_;
-        code_.status.assign(raw_msg_, raw_msg_len_);
+        status_.code = raw_status_;
+        status_.status.assign(raw_msg_, raw_msg_len_);
 
         for (std::size_t i = 0; i < num_headers_; i++) {
             auto& h = raw_headers_ptr_.get()[i];
@@ -79,9 +79,9 @@ reply::parse(buffer& b)
         raw_headers_ptr_.reset();
         b.erase(b.begin(), b.begin() + (std::size_t) ret);
     } else if (ret == -1) {
-        throw bad_response();
+        throw BadResponse;
     } else if (ret != -2) {
-        throw internal_client_error();
+        throw InternalClientError;
     }
 
     prev_buf_len_ = b.size();
@@ -93,9 +93,9 @@ std::size_t
 reply::content_length() const
 { return content_length_; }
 
-const reply_code&
+const http_status&
 reply::code() const
-{ return code_; }
+{ return status_; }
 
 std::string&
 reply::h(const std::string& name)
@@ -121,7 +121,7 @@ reply::content() const
 
     oss
         << "HTTP/1.1 "
-        << code_.code << " " << code_.status << "\r\n"
+        << status_.code << " " << status_.status << "\r\n"
         << hdrs
         << "\r\n"
         << body
@@ -131,33 +131,17 @@ reply::content() const
 }
 
 bool
-reply::operator==(const reply_code& rc) const
-{ return code_ == rc; }
+reply::operator==(const http_status& s) const
+{ return status_ == s; }
 
 bool
-reply::operator!=(const reply_code& rc) const
-{ return !(*this == rc); }
-
-bool
-reply::operator==(const error& e) const
-{ return code_.code == e.code(); }
-
-bool
-reply::operator!=(const error& e) const
-{ return !(*this == e); }
+reply::operator!=(const http_status& s) const
+{ return !(*this == s); }
 
 reply&
-reply::operator<<(const reply_code& rc)
+reply::operator<<(const http_status& s)
 {
-    code_ = rc;
-
-    return *this;
-}
-
-reply&
-reply::operator<<(const error& e)
-{
-    code_ = reply_code{ e.code(), e.what() };
+    status_ = s;
 
     return *this;
 }

@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include <nx/request.hpp>
-#include <nx/error.hpp>
+#include <nx/http_status.hpp>
 #include <nx/utils.hpp>
 
 namespace nx {
@@ -100,9 +100,9 @@ request::parse(buffer& b)
         raw_headers_ptr_.reset();
         b.erase(b.begin(), b.begin() + (std::size_t) ret);
     } else if (ret == -1) {
-        throw bad_request();
+        throw BadRequest;
     } else if (ret != -2) {
-        throw internal_server_error();
+        throw InternalServerError;
     }
 
     prev_buf_len_ = b.size();

@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     bool item_not_found = false;
 
     hc(GET, sep) / "persons/1234" = [&](const reply& rep, buffer& data) {
-        item_not_found = (rep == not_found());
+        item_not_found = (rep == NotFound);
 
         deadlines[0].stop();
         cvs[0].notify();

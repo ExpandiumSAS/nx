@@ -11,8 +11,7 @@
 #include <nx/config.h>
 #include <nx/buffer.hpp>
 #include <nx/headers.hpp>
-#include <nx/error.hpp>
-#include <nx/reply_code.hpp>
+#include <nx/http_status.hpp>
 
 namespace nx {
 
@@ -32,7 +31,7 @@ public:
 
     std::size_t content_length() const;
 
-    const reply_code& code() const;
+    const http_status& code() const;
 
     std::string& h(const std::string& name);
     const std::string& h(const std::string& name) const;
@@ -40,13 +39,10 @@ public:
     std::ostringstream& data();
     std::string content() const;
 
-    bool operator==(const reply_code& rc) const;
-    bool operator!=(const reply_code& rc) const;
-    bool operator==(const error& e) const;
-    bool operator!=(const error& e) const;
+    bool operator==(const http_status& s) const;
+    bool operator!=(const http_status& s) const;
 
-    reply& operator<<(const reply_code& rc);
-    reply& operator<<(const error& e);
+    reply& operator<<(const http_status& s);
     reply& operator<<(const header& h);
 
     template <typename T>
@@ -63,7 +59,7 @@ private:
 
     raw_headers_ptr raw_headers_ptr_;
     headers headers_;
-    reply_code code_;
+    http_status status_;
     std::size_t content_length_;
     std::ostringstream data_;
 
