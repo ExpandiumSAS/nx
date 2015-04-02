@@ -78,7 +78,12 @@ public:
     {
         return [&](const request& req, buffer& data, reply& rep) {
             auto id = next_id_(id_);
-            c_.emplace(id, value_type{});
+            value_type item;
+
+            json(data) >> item;
+
+            item.id = id;
+            c_.emplace(id, item);
 
             rep
                 << Created

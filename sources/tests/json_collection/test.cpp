@@ -76,8 +76,6 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     hc(POST, sep) / "persons" = [&](const reply& rep, buffer& data) {
         item_created = (rep == Created);
 
-        std::cout << "Location: " << rep.h(location_lc) << std::endl;
-
         deadlines[2].stop();
         cvs[2].notify();
     };

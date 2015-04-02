@@ -11,6 +11,7 @@
 
 #include <nx/config.h>
 #include <nx/buffer.hpp>
+#include <nx/utils.hpp>
 
 namespace nx {
 
@@ -50,7 +51,13 @@ private:
         auto it = types_.find(type_name);
 
         if (it == types_.end()) {
-            throw std::logic_error("unknown type");
+            std::ostringstream oss;
+
+            oss
+                << "unknown type: "
+                << type_info<T>();
+
+            throw std::logic_error(oss.str());
         }
 
         auto fmt = jsonv::formats::compose(

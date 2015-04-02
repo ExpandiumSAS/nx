@@ -74,6 +74,8 @@ http::process_request()
         request_cb_(req_, rbuf(), rep_);
     } catch (const error& e) {
         rep_ << e;
+    } catch (const std::exception& e) {
+        rep_ << not_found();
     }
 
     *this << rep_.content();
