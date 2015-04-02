@@ -151,7 +151,7 @@ request::content() const
     auto hdrs = headers_;
 
     if (method_ != GET.str) {
-        hdrs << header(nx::content_length, body.size());
+        hdrs << header(nx::content_length, std::to_string(body.size()));
     }
 
     oss

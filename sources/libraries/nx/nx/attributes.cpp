@@ -14,11 +14,6 @@ attribute_base::attribute_base(std::string&& n, std::string&& v)
 value(std::move(v))
 {}
 
-attribute_base::attribute_base(const std::string& n, const char* v)
-: name(n),
-value(v)
-{}
-
 std::ostream&
 attribute_base::operator()(std::ostream& os) const
 {

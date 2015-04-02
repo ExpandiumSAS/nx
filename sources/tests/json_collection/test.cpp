@@ -71,29 +71,33 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     bool item_has_id = false;
     bool item_with_id_found = false;
 
-    hc(POST, sep) / "persons" = [&](const reply& rep, buffer& data) {
-        item_created = (rep == Created);
+    hc(POST, sep)
+        / "persons"
+        << attribute{ "pouet", "proot" }
+        << json(test::person{ 42, "Bart Simpson", 15 })
+        = [&](const reply& rep, buffer& data) {
+            item_created = (rep == Created);
 
-        auto parts = split("/", rep.h(location));
+            auto parts = split("/", rep.h(location));
 
-        if (!parts.empty()) {
-            item_has_id = true;
+            if (!parts.empty()) {
+                item_has_id = true;
 
-            hc(GET, sep) / "persons" / parts.back() =
-                [&](const reply& rep, buffer& data) {
-                    item_with_id_found = (rep == OK);
-                    test::person p;
+                hc(GET, sep) / "persons" / parts.back() =
+                    [&](const reply& rep, buffer& data) {
+                        item_with_id_found = (rep == OK);
+                        test::person p;
 
-                    std::cout << "P: " << data << std::endl;
+                        std::cout << "P: " << data << std::endl;
 
-                    json(data) >> p;
+                        json(data) >> p;
 
-                    cv.notify();
-                };
-        }
+                        cv.notify();
+                    };
+                }
 
-        cv.notify();
-    };
+                cv.notify();
+        };
 
     cv.wait();
     nx::stop();

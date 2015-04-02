@@ -13,12 +13,6 @@ struct NX_API attribute_base
 {
     attribute_base(const std::string& n, const std::string& v);
     attribute_base(std::string&& n, std::string&& v);
-    attribute_base(const std::string& n, const char* v);
-
-    template <typename T>
-    attribute_base(const std::string& n, const T& v)
-    : attribute_base(n, std::to_string(v))
-    {}
 
     std::ostream& operator()(std::ostream& os) const;
 
