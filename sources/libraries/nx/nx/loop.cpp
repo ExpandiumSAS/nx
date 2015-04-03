@@ -78,7 +78,7 @@ loop::run(int flags)
         return false;
     }
 
-    return ev_run(l_, flags);
+    return ev_run(l_, flags | EVFLAG_FORKCHECK);
 }
 
 void
@@ -86,8 +86,6 @@ loop::start()
 {
     t_ = std::thread(
         [this]() {
-            ev_loop_fork(l_);
-
             while (!stop_) {
                 run(EVRUN_ONCE);
             }
