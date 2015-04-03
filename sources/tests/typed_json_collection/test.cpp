@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE json_collection
+#define BOOST_TEST_MODULE typed_json_collection
 
 #include <iostream>
 
@@ -15,7 +15,7 @@ const std::size_t test_count = 4;
 nx::timer deadline;
 nx::cond_var cv(test_count);
 
-BOOST_AUTO_TEST_CASE(httpd_json_collection)
+BOOST_AUTO_TEST_CASE(httpd_typed_json_collection)
 {
     using namespace nx;
 
@@ -26,10 +26,10 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
     deadline.start();
 
-    using collection_type = make_json_collection<>::type;
+    using collection_type = make_json_collection<test::person>::type;
     using persons = collection_type::values_type;
 
-    collection_type coll("persons");
+    collection_type coll("persons", test::person_fmt);
 
     httpd hd;
 
@@ -54,10 +54,11 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
     hc(GET, sep) / "persons" = [&](const reply& rep, buffer& data) {
         got_collection = (rep == OK);
+        persons p;
 
-        json persons(data);
+        json(data) >> p;
 
-        //empty_collection = persons.value().as_array().empty();
+        empty_collection = p.empty();
 
         cv.notify();
     };
@@ -68,11 +69,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
     hc(POST, sep)
         / "persons"
-        << jsonv::object({
-            { "id", 42 },
-            { "name", "Bart Simpson" },
-            { "age", 15 }
-        })
+        << json(test::person{ 42, "Bart Simpson", 15 })
         = [&](const reply& rep, buffer& data) {
             item_created = (rep == Created);
 
@@ -84,9 +81,9 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
                 hc(GET, sep) / "persons" / parts.back() =
                     [&](const reply& rep, buffer& data) {
                         item_with_id_found = (rep == OK);
-                        // test::person p;
+                        test::person p;
 
-                        // json(data) >> p;
+                        json(data) >> p;
 
                         cv.notify();
                     };

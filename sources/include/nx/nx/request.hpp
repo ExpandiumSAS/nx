@@ -55,6 +55,7 @@ public:
     request& operator<<(const attribute& a);
     request& operator<<(const attributes& a);
     request& operator<<(const json& js);
+    request& operator<<(const jsonv::value& jv);
 
     template <typename T>
     request& operator<<(const T& v)

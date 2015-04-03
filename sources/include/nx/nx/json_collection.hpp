@@ -49,7 +49,7 @@ private:
     std::string path_;
 };
 
-class json_collection : public json_collection_base
+class NX_API json_collection : public json_collection_base
 {
 public:
     using value_type = jsonv::value;

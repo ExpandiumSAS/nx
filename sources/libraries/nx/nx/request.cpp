@@ -225,6 +225,15 @@ request::operator<<(const json& js)
     return *this;
 }
 
+request&
+request::operator<<(const jsonv::value& jv)
+{
+    headers_ << application_json;
+    data_ << jv.as_string();
+
+    return *this;
+}
+
 bool
 request::is(const nx::method& m) const
 { return method_ == m.str; }
