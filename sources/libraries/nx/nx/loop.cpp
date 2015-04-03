@@ -1,16 +1,23 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <memory>
 
 #include <nx/loop.hpp>
 
 namespace nx {
 
+std::once_flag flag;
+using loop_ptr = std::unique_ptr<loop>;
+
+loop_ptr _lptr_;
+
 loop&
 loop::get()
 {
-    static loop l;
-    return l;
+    std::call_once(flag, [](){ _lptr_ = std::make_unique<loop>(); });
+
+    return *_lptr_;
 }
 
 loop&
@@ -42,7 +49,7 @@ loop::unregister_handle(handle_ptr p)
 }
 
 loop::loop()
-: l_(ev_default_loop())
+: l_(ev_default_loop(EVFLAG_FORKCHECK))
 {
     ev_async_init(
         &async_w_,
@@ -78,7 +85,7 @@ loop::run(int flags)
         return false;
     }
 
-    return ev_run(l_, flags | EVFLAG_FORKCHECK);
+    return ev_run(l_, flags);
 }
 
 void

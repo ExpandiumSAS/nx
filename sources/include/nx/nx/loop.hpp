@@ -32,6 +32,9 @@ class NX_API loop
 public:
     static loop& get();
 
+    loop();
+    ~loop();
+
     void start();
     void stop();
 
@@ -43,8 +46,7 @@ public:
     void unregister_handle(handle_ptr p);
 
 private:
-    loop();
-    ~loop();
+
 
     loop(const loop&) = delete;
     loop(loop&&) = delete;

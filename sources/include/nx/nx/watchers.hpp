@@ -15,7 +15,7 @@ public:
 
     io(int fd)
     : base_type()
-    { set([&](){ ev_io_set(ptr(), fd, 0); }); }
+    { (*this)(fd, 0); }
 
     virtual void start() noexcept
     { async() << [&](evloop el) { ev_io_start(el, ptr()); }; }
