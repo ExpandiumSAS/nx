@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
         json persons(data);
 
-        //empty_collection = persons.value().as_array().empty();
+        empty_collection = persons.value().empty();
 
         cv.notify();
     };
@@ -65,6 +65,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     bool item_created = false;
     bool item_has_id = false;
     bool item_with_id_found = false;
+    bool item_is_correct = false;
 
     hc(POST, sep)
         / "persons"
@@ -84,9 +85,17 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
                 hc(GET, sep) / "persons" / parts.back() =
                     [&](const reply& rep, buffer& data) {
                         item_with_id_found = (rep == OK);
-                        // test::person p;
 
-                        // json(data) >> p;
+                        json person(data);
+                        const auto& p = person.value();
+
+                        item_is_correct = (
+                            p.at("id").as_integer() == 1
+                            &&
+                            p.at("name").as_string() == "Bart Simpson"
+                            &&
+                            p.at("age").as_integer() == 15
+                        );
 
                         cv.notify();
                     };
@@ -121,5 +130,9 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     BOOST_CHECK_MESSAGE(
         item_with_id_found,
         "new item with id was found"
+    );
+    BOOST_CHECK_MESSAGE(
+        item_is_correct,
+        "new item is correct"
     );
 }

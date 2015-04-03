@@ -154,4 +154,15 @@ reply::operator<<(const header& h)
     return *this;
 }
 
+reply&
+reply::operator<<(const jsonv::value& v)
+{
+    std::ostringstream os;
+
+    os << v;
+    data_ << os.str();
+
+    return *this;
+}
+
 } // namespace nx

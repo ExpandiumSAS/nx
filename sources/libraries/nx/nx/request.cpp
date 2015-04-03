@@ -226,10 +226,13 @@ request::operator<<(const json& js)
 }
 
 request&
-request::operator<<(const jsonv::value& jv)
+request::operator<<(const jsonv::value& v)
 {
     headers_ << application_json;
-    data_ << jv.as_string();
+
+    std::ostringstream oss;
+    oss << v;
+    data_ << oss.str();
 
     return *this;
 }

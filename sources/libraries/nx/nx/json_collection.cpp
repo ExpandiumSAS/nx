@@ -35,11 +35,13 @@ json_collection::GET(const collection_tag& t)
         auto it = c_.begin();
 
         if (it != c_.end()) {
-            rep << std::to_string(it->second);
+            rep << it->second;
+            ++it;
         }
 
-        while (++it != c_.end()) {
-            rep << "," << std::to_string(it->second);
+        while (it != c_.end()) {
+            rep << "," << it->second;
+            ++it;
         }
 
         rep << "]";
@@ -111,7 +113,7 @@ json_collection::GET(const item_tag& t)
         auto it = c_.find(id);
 
         if (it != c_.end()) {
-            rep << std::to_string(it->second);
+            rep << it->second;
         } else {
             rep << NotFound;
         }

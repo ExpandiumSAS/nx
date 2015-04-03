@@ -12,6 +12,7 @@
 #include <nx/buffer.hpp>
 #include <nx/headers.hpp>
 #include <nx/http_status.hpp>
+#include <nx/json.hpp>
 
 namespace nx {
 
@@ -44,6 +45,7 @@ public:
 
     reply& operator<<(const http_status& s);
     reply& operator<<(const header& h);
+    reply& operator<<(const jsonv::value& v);
 
     template <typename T>
     reply& operator<<(const T& v)
