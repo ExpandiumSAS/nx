@@ -9,12 +9,12 @@ namespace nx {
 namespace regexp {
 
 NX_RE(
-    http_path,
+    nx_path,
     "(/((" + path_segments + ")(?:[?](" + query + "))?))"
 )
 NX_RE(
-    http_uri,
-    "((http)://(" + host + ")(?::(" + port + "))?"
+    nx_uri,
+    "((" + alpha + "[a-zA-Z0-9+\\-.]*" + ")://(" + host + ")(?::(" + port + "))?"
     "(/((" + path_segments + ")(?:[?](" + query + "))?))?)"
 )
 

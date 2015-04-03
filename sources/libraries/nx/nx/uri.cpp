@@ -3,7 +3,7 @@
 #include <nx/uri.hpp>
 #include <nx/escape.hpp>
 #include <nx/http_status.hpp>
-#include <nx/regexp/http.hpp>
+#include <nx/regexp/uri.hpp>
 #include <nx/utils.hpp>
 
 namespace nx {
@@ -62,7 +62,7 @@ uri::parse(const std::string& u)
     host_ = "localhost";
     port_ = 80;
 
-    if (match(u, regexp::http_uri, m)) {
+    if (match(u, regexp::nx_uri, m)) {
         // Full HTTP URI
         pos = 2;
         scheme_ = m[pos++].str();
@@ -74,7 +74,7 @@ uri::parse(const std::string& u)
 
         // Index of path
         pos = 7;
-    } else if (match(u, regexp::http_path, m)) {
+    } else if (match(u, regexp::nx_path, m)) {
         // Only HTTP path
         pos = 3;
     } else {
