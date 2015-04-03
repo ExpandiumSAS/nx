@@ -24,7 +24,10 @@ public:
     void add(const jsonv::formats& fmt)
     {
         auto type_name = typeid(T).name();
-        types_.emplace(type_name, fmt);
+
+        if (types_.find(type_name) == types_.end()) {
+            types_.emplace(type_name, fmt);
+        }
     }
 
     template <typename T>
@@ -91,6 +94,10 @@ public:
     { json_types::get().from_json(t, v_); }
 
     void operator()(std::ostream& os) const;
+
+    jsonv::value&& value() &&;
+    jsonv::value& value() &;
+    const jsonv::value& value() const &;
 
 private:
     jsonv::value v_;

@@ -26,14 +26,10 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
 
     deadline.start();
 
-    using collection_type = json_collection<test::person>;
+    using collection_type = make_json_collection<test::person>::type;
     using persons = collection_type::values_type;
 
-    // Register test::person type
-    add_json_format<test::person>(test::person_fmt);
-    add_json_format<persons>(collection_type::format());
-
-    collection_type coll("persons");
+    collection_type coll("persons", test::person_fmt);
 
     httpd hd;
 

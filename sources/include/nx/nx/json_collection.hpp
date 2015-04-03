@@ -3,9 +3,11 @@
 
 #include <unordered_map>
 #include <string>
+#include <type_traits>
 
 #include <jsonv/serialization_builder.hpp>
 
+#include <nx/config.h>
 #include <nx/json.hpp>
 #include <nx/http.hpp>
 #include <nx/route.hpp>
@@ -27,31 +29,75 @@ struct next_id<std::size_t>
     { return ++id; }
 };
 
-template <typename T>
-class json_collection
+class NX_API json_collection_base
 {
 public:
-    using this_type = json_collection<T>;
+    json_collection_base(const std::string& path);
+    virtual ~json_collection_base();
+
+    const std::string& path() const;
+
+    virtual route_cb GET(const collection_tag& t) = 0;
+    virtual route_cb PUT(const collection_tag& t) = 0;
+    virtual route_cb POST(const collection_tag& t) = 0;
+    virtual route_cb DELETE(const collection_tag& t) = 0;
+    virtual route_cb GET(const item_tag& t) = 0;
+    virtual route_cb PUT(const item_tag& t) = 0;
+    virtual route_cb DELETE(const item_tag& t) = 0;
+
+private:
+    std::string path_;
+};
+
+class json_collection : public json_collection_base
+{
+public:
+    using value_type = jsonv::value;
+    using id_type = std::size_t;
+    using next_id_type = next_id<id_type>;
+    using values_type = std::unordered_map<id_type, value_type>;
+
+    json_collection(const std::string& path);
+
+    values_type& get();
+    const values_type& get() const;
+
+    virtual route_cb GET(const collection_tag& t);
+    virtual route_cb PUT(const collection_tag& t);
+    virtual route_cb POST(const collection_tag& t);
+    virtual route_cb DELETE(const collection_tag& t);
+    virtual route_cb GET(const item_tag& t);
+    virtual route_cb PUT(const item_tag& t);
+    virtual route_cb DELETE(const item_tag& t);
+
+private:
+    id_type id_;
+    next_id_type next_id_;
+    values_type c_;
+};
+
+template <typename T>
+class typed_json_collection : public json_collection_base
+{
+public:
+    using this_type = typed_json_collection<T>;
     using value_type = T;
     using id_type = decltype(std::declval<T&>().id);
     using next_id_type = next_id<id_type>;
     using values_type = std::unordered_map<id_type, value_type>;
 
-    json_collection(const std::string& path)
-    : path_(clean_path(path)),
+    typed_json_collection(const std::string& path, const jsonv::formats& fmt)
+    : json_collection_base(path),
     id_(0)
-    {}
-
-    static jsonv::formats format()
     {
-        return
-            jsonv::formats_builder()
-            .register_container<values_type>()
-            ;
-    }
+        // Register T format
+        add_json_format<T>(fmt);
 
-    const std::string& path() const
-    { return path_; }
+        // Register collection format
+        add_json_format<values_type>(
+            jsonv::formats_builder().register_container<values_type>()
+        );
+    }
 
     values_type& get()
     { return c_; }
@@ -144,6 +190,24 @@ private:
     id_type id_;
     next_id_type next_id_;
     values_type c_;
+};
+
+template <typename T>
+struct json_collection_type
+{
+    using type = typed_json_collection<T>;
+};
+
+template <>
+struct json_collection_type<jsonv::value>
+{
+    using type = json_collection;
+};
+
+template <typename T = jsonv::value>
+struct make_json_collection
+{
+    using type = typename json_collection_type<T>::type;
 };
 
 } // namespace nx

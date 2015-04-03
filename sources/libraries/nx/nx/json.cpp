@@ -21,15 +21,25 @@ json::json()
 
 json::json(buffer& b)
 {
-    std::string js;
-
     try {
-        b >> js;
-        v_ = jsonv::parse(js);
+        v_ = jsonv::parse(jsonv::string_view(b.data(), b.size()));
+        b.clear();
     } catch (const jsonv::parse_error& e) {
         throw BadRequest;
     }
 }
+
+jsonv::value&&
+json::value() &&
+{ return std::move(v_); }
+
+jsonv::value&
+json::value() &
+{ return v_; }
+
+const jsonv::value&
+json::value() const &
+{ return v_; }
 
 void
 json::operator()(std::ostream& os) const
