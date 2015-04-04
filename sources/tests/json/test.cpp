@@ -7,7 +7,7 @@
 #include <nx/nx.hpp>
 #include <nx/utils.hpp>
 
-#include "person.hpp"
+#include <test/person.hpp>
 
 BOOST_AUTO_TEST_CASE(httpd_json)
 {

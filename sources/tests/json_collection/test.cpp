@@ -7,7 +7,7 @@
 #include <nx/nx.hpp>
 #include <nx/utils.hpp>
 
-#include "../json/person.hpp"
+#include <test/person.hpp>
 
 // Configure a deadline timer for each test
 const std::size_t test_count = 4;
