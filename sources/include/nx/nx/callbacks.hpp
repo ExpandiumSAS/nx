@@ -31,7 +31,7 @@ public:
     operator type() const
     { return cb_; }
 
-    bool operator()(Args&&... args)
+    bool operator()(Args... args)
     {
         bool called = false;
 

@@ -3,19 +3,23 @@
 namespace nx {
 
 json_collection_base::json_collection_base(const std::string& path)
-: path_(clean_path(path))
+: id_(0),
+path_(clean_path(path))
 {}
 
 json_collection_base::~json_collection_base()
 {}
+
+json_collection_base::id_type
+json_collection_base::next_id()
+{ return next_id_(id_); }
 
 const std::string&
 json_collection_base::path() const
 { return path_; }
 
 json_collection::json_collection(const std::string& path)
-: json_collection_base(path),
-id_(0)
+: json_collection_base(path)
 {}
 
 json_collection::values_type&
@@ -72,6 +76,7 @@ json_collection::PUT(const collection_tag& t)
             );
 
             c_[id] = v;
+            handler(tags::on_item_added)(id);
         }
     };
 }
@@ -84,11 +89,12 @@ json_collection::POST(const collection_tag& t)
             throw BadRequest;
         }
 
-        auto id = next_id_(id_);
+        auto id = next_id();
         json item(data);
 
         item.value()["id"] = id;
         c_.emplace(id, item.value());
+        handler(tags::on_item_added)(id);
 
         rep
             << Created
@@ -130,6 +136,7 @@ json_collection::PUT(const item_tag& t)
 
         item.value()["id"] = id;
         c_[id] = item.value();
+        handler(tags::on_item_added)(id);
     };
 }
 
@@ -139,6 +146,7 @@ json_collection::DELETE(const item_tag& t)
     return [&](const request& req, buffer& data, reply& rep) {
         auto id = nx::to_num<id_type>(req.a("id"));
 
+        handler(tags::on_item_removed)(id);
         c_.erase(id);
     };
 }
