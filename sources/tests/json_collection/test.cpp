@@ -27,7 +27,6 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     deadline.start();
 
     using collection_type = make_json_collection<>::type;
-    using persons = collection_type::values_type;
 
     collection_type coll("persons");
 

@@ -32,11 +32,11 @@ struct item_tag {};
 struct collection_tag {};
 
 template <typename T>
-struct next_id
+struct make_next_id
 {};
 
 template <>
-struct next_id<std::size_t>
+struct make_next_id<std::size_t>
 {
     std::size_t operator()(std::size_t& id) const
     { return ++id; }
@@ -81,12 +81,12 @@ public:
     virtual route_cb DELETE(const item_tag& t) = 0;
 
 protected:
-    using next_id_type = next_id<id_type>;
+    using make_next_id_type = make_next_id<id_type>;
 
     id_type next_id();
 
     id_type id_;
-    next_id_type next_id_;
+    make_next_id_type make_next_id_;
 
 private:
     std::string path_;

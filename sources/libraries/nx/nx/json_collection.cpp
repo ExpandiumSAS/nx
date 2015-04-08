@@ -12,7 +12,7 @@ json_collection_base::~json_collection_base()
 
 json_collection_base::id_type
 json_collection_base::next_id()
-{ return next_id_(id_); }
+{ return make_next_id_(id_); }
 
 const std::string&
 json_collection_base::path() const
