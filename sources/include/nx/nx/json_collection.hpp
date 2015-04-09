@@ -72,6 +72,8 @@ public:
 
     const std::string& path() const;
 
+    void set_dir(const std::string& path);
+
     virtual route_cb GET(const collection_tag& t) = 0;
     virtual route_cb PUT(const collection_tag& t) = 0;
     virtual route_cb POST(const collection_tag& t) = 0;
@@ -85,17 +87,22 @@ protected:
 
     id_type next_id();
 
+    jsonv::value load() const;
+    bool save(const jsonv::value& coll) const;
+
     id_type id_;
     make_next_id_type make_next_id_;
 
 private:
     std::string path_;
     callbacks callbacks_;
+    std::string dir_;
 };
 
 class NX_API json_collection : public json_collection_base
 {
 public:
+    using base_type = json_collection_base;
     using value_type = jsonv::value;
     using id_type = json_collection_base::id_type;
     using values_type = std::unordered_map<id_type, value_type>;
@@ -104,6 +111,9 @@ public:
 
     values_type& get();
     const values_type& get() const;
+
+    void load();
+    void save() const;
 
     virtual route_cb GET(const collection_tag& t);
     virtual route_cb PUT(const collection_tag& t);
@@ -114,6 +124,9 @@ public:
     virtual route_cb DELETE(const item_tag& t);
 
 private:
+    void put_collection(const jsonv::value& c);
+    jsonv::value get_collection() const;
+
     values_type c_;
 };
 

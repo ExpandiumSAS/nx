@@ -56,6 +56,21 @@ public:
         return *this;
     }
 
+    void set_reuseaddr()
+    {
+        int yes = 1;
+
+        handle_error(
+            base_type::derived(),
+            "setting address reuse",
+            setsockopt(
+                base_type::fh(),
+                SOL_SOCKET, SO_REUSEADDR,
+                &yes, sizeof(int)
+            )
+        );
+    }
+
     endpoint& local()
     { return local_; }
 
@@ -95,6 +110,7 @@ connect(
 )
 {
     h.set_nonblocking();
+    h.set_reuseaddr();
     h.remote() = to;
 
     h[tags::on_drain] = [cb = std::move(cb)](Handle& h) {
@@ -139,6 +155,7 @@ serve(
 )
 {
     h.local() = from;
+    h.set_reuseaddr();
 
     bool error = handle_error(
         h,
