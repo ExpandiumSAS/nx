@@ -112,6 +112,9 @@ public:
     values_type& get();
     const values_type& get() const;
 
+    value_type& get(id_type id);
+    const value_type& get(id_type id) const;
+
     void load();
     void save() const;
 

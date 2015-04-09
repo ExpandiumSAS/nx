@@ -79,6 +79,14 @@ const json_collection::values_type&
 json_collection::get() const
 { return c_; }
 
+json_collection::value_type&
+json_collection::get(id_type id)
+{ return c_[id]; }
+
+const json_collection::value_type&
+json_collection::get(id_type id) const
+{ return c_.at(id); }
+
 void
 json_collection::load()
 {
