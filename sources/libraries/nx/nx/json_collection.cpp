@@ -31,7 +31,7 @@ json_collection_base::set_dir(const std::string& dir)
 jsonv::value
 json_collection_base::load() const
 {
-    jsonv::value coll;
+    jsonv::value coll = jsonv::array();
 
     if (!dir_.empty()) {
         auto file = cxxu::cat_file(dir_, path_ + ".json");
