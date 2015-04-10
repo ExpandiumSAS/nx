@@ -206,9 +206,7 @@ json_collection::put_collection(const jsonv::value& c)
             continue;
         }
 
-        auto id = nx::to_num<id_type>(
-            jsonv::extract<std::string>(it->second)
-        );
+        auto id = it->second.as_integer();
 
         c_[id] = v;
         handler(tags::on_item_added)(id);
