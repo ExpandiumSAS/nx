@@ -128,6 +128,7 @@ public:
 
 private:
     void put_collection(const jsonv::value& c);
+    void clear_collection();
     jsonv::value get_collection() const;
 
     values_type c_;

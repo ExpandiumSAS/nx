@@ -114,7 +114,7 @@ json_collection::PUT(const collection_tag& t)
             throw BadRequest;
         }
 
-        c_.clear();
+        clear_collection();
 
         json arr(data);
         put_collection(arr.value());
@@ -149,7 +149,7 @@ route_cb
 json_collection::DELETE(const collection_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
-        c_.clear();
+        clear_collection();
         save();
     };
 }
@@ -178,9 +178,18 @@ json_collection::PUT(const item_tag& t)
         json item(data);
 
         item.value()["id"] = id;
+
+        bool exists = (c_.find(id) != c_.end());
+
         c_[id] = item.value();
         save();
-        handler(tags::on_item_added)(id);
+
+        if (exists) {
+            handler(tags::on_item_changed)(id);
+        } else {
+            handler(tags::on_item_added)(id);
+        }
+
     };
 }
 
@@ -211,6 +220,16 @@ json_collection::put_collection(const jsonv::value& c)
         c_[id] = v;
         handler(tags::on_item_added)(id);
     }
+}
+
+void
+json_collection::clear_collection()
+{
+    for (const auto& p : c_) {
+        handler(tags::on_item_removed)(p.first);
+    }
+
+    c_.clear();
 }
 
 jsonv::value
