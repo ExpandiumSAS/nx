@@ -20,6 +20,10 @@ json_collection_base::id_type
 json_collection_base::next_id()
 { return make_next_id_(id_); }
 
+json_collection_base::id_type
+json_collection_base::cur_id()
+{ return id_; }
+
 const std::string&
 json_collection_base::path() const
 { return path_; }
@@ -91,7 +95,16 @@ void
 json_collection::load()
 {
     auto coll = base_type::load();
-    put_collection(coll);
+
+    try {
+        put_collection(coll);
+    } catch (const std::exception& e) {
+        cxxu::warning()
+            << "collection '" << path() << "'"
+            << " contains errors:\n"
+            << e.what()
+            ;
+    }
 }
 
 void
@@ -123,6 +136,8 @@ json_collection::PUT(const collection_tag& t)
             put_collection(arr.value());
             save();
         } catch (const std::exception& e) {
+            c_ = std::move(old_c);
+
             throw BadRequest("bad JSON data: ", e);
         }
     };
@@ -151,6 +166,8 @@ json_collection::POST(const collection_tag& t)
                 << header{ location, join("/", path(), id) }
                 ;
         } catch (const std::exception& e) {
+            c_.erase(cur_id());
+
             throw BadRequest("bad JSON data: ", e);
         }
     };
@@ -206,9 +223,10 @@ json_collection::PUT(const item_tag& t)
                 handler(tags::on_item_added)(id);
             }
         } catch (const std::exception& e) {
+            c_.erase(id);
+
             throw BadRequest("bad JSON data: ", e);
         }
-
     };
 }
 
@@ -231,6 +249,9 @@ json_collection::DELETE(const item_tag& t)
 void
 json_collection::put_collection(const jsonv::value& c)
 {
+    std::size_t error_count = 0;
+    std::ostringstream oss;
+
     for (auto& v : c.as_array()) {
         auto it = v.find("id");
 
@@ -238,10 +259,26 @@ json_collection::put_collection(const jsonv::value& c)
             continue;
         }
 
-        auto id = it->second.as_integer();
+        std::size_t id;
 
-        c_[id] = v;
-        handler(tags::on_item_added)(id);
+        try {
+            auto id = it->second.as_integer();
+            c_[id] = v;
+            handler(tags::on_item_added)(id);
+        } catch (const std::exception& e) {
+            // Bad item
+            c_.erase(id);
+
+            if (error_count++) {
+                oss << "\n";
+            }
+
+            oss << "bad item " << id << ": " << e.what();
+        }
+    }
+
+    if (error_count > 0) {
+        throw std::runtime_error(oss.str());
     }
 }
 

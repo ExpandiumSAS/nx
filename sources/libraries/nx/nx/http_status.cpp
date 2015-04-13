@@ -1,6 +1,40 @@
+#include <sstream>
+
 #include <nx/http_status.hpp>
 
 namespace nx {
+
+http_status::http_status()
+{}
+
+http_status::http_status(code_type c, const char* s)
+: code(c),
+status(s)
+{}
+
+http_status::http_status(
+    code_type c,
+    const std::string& s,
+    const std::string& what
+)
+: code(c),
+status(s),
+error(what)
+{}
+
+const char*
+http_status::what() const noexcept
+{
+    std::ostringstream oss;
+
+    oss << code << " " << status;
+
+    if (is_error()) {
+        oss << ": " << error;
+    }
+
+    return oss.str().c_str();
+}
 
 bool
 http_status::operator==(const http_status& other) const

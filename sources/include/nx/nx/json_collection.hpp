@@ -86,6 +86,7 @@ protected:
     using make_next_id_type = make_next_id<id_type>;
 
     id_type next_id();
+    id_type cur_id();
 
     jsonv::value load() const;
     bool save(const jsonv::value& coll) const;

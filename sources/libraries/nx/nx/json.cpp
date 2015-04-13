@@ -49,7 +49,7 @@ void
 check_paths(const jsonv::value& v, std::initializer_list<std::string> paths)
 {
     for (const auto& p : paths) {
-        if (v.count_path(p) == 0) {
+        if (v.count_path(jsonv::path::create(p)) == 0) {
             throw std::runtime_error("json path not found: " + p);
         }
     }
