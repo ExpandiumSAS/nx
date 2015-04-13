@@ -111,14 +111,20 @@ json_collection::PUT(const collection_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
         if (data.empty()) {
-            throw BadRequest;
+            throw BadRequest("request body is empty");
         }
 
-        clear_collection();
+        auto old_c = c_;
 
-        json arr(data);
-        put_collection(arr.value());
-        save();
+        try {
+            clear_collection();
+
+            json arr(data);
+            put_collection(arr.value());
+            save();
+        } catch (const std::exception& e) {
+            throw BadRequest("bad JSON data: ", e);
+        }
     };
 }
 
@@ -127,21 +133,26 @@ json_collection::POST(const collection_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
         if (data.empty()) {
-            throw BadRequest;
+            throw BadRequest("request body is empty");
         }
 
-        auto id = next_id();
-        json item(data);
+        try {
+            json item(data);
 
-        item.value()["id"] = id;
-        c_.emplace(id, item.value());
-        save();
-        handler(tags::on_item_added)(id);
+            auto id = next_id();
 
-        rep
-            << Created
-            << header{ location, join("/", path(), id) }
-            ;
+            item.value()["id"] = id;
+            c_.emplace(id, item.value());
+            save();
+            handler(tags::on_item_added)(id);
+
+            rep
+                << Created
+                << header{ location, join("/", path(), id) }
+                ;
+        } catch (const std::exception& e) {
+            throw BadRequest("bad JSON data: ", e);
+        }
     };
 }
 
@@ -175,19 +186,27 @@ json_collection::PUT(const item_tag& t)
     return [&](const request& req, buffer& data, reply& rep) {
         auto id = nx::to_num<id_type>(req.a("id"));
 
-        json item(data);
+        if (data.empty()) {
+            throw BadRequest("request body is empty");
+        }
 
-        item.value()["id"] = id;
+        try {
+            json item(data);
 
-        bool exists = (c_.find(id) != c_.end());
+            item.value()["id"] = id;
 
-        c_[id] = item.value();
-        save();
+            bool exists = (c_.find(id) != c_.end());
 
-        if (exists) {
-            handler(tags::on_item_changed)(id);
-        } else {
-            handler(tags::on_item_added)(id);
+            c_[id] = item.value();
+            save();
+
+            if (exists) {
+                handler(tags::on_item_changed)(id);
+            } else {
+                handler(tags::on_item_added)(id);
+            }
+        } catch (const std::exception& e) {
+            throw BadRequest("bad JSON data: ", e);
         }
 
     };
@@ -199,9 +218,13 @@ json_collection::DELETE(const item_tag& t)
     return [&](const request& req, buffer& data, reply& rep) {
         auto id = nx::to_num<id_type>(req.a("id"));
 
-        handler(tags::on_item_removed)(id);
-        c_.erase(id);
-        save();
+        if (c_.find(id) != c_.end()) {
+            handler(tags::on_item_removed)(id);
+            c_.erase(id);
+            save();
+        } else {
+            throw NotFound;
+        }
     };
 }
 

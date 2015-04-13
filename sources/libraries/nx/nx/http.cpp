@@ -74,8 +74,8 @@ http::process_request()
     } catch (const http_status& s) {
         rep_ << s;
     } catch (const std::exception& e) {
-        std::cout << "NotFound by " << e.what() << std::endl;
-        rep_ << NotFound;
+        std::cout << "BadRequest by " << e.what() << std::endl;
+        rep_ << BadRequest(e);
     }
 
     *this << rep_.content();
@@ -93,7 +93,7 @@ http::process_reply()
     } catch (const http_status& s) {
         rep_ << s;
     } catch (const std::exception& e) {
-        rep_ << NotFound;
+        rep_ << BadResponse(e);
     }
 
     // All data arrived, call upper handler

@@ -25,7 +25,7 @@ json::json(buffer& b)
         v_ = jsonv::parse(jsonv::string_view(b.data(), b.size()));
         b.clear();
     } catch (const jsonv::parse_error& e) {
-        throw BadRequest;
+        throw std::runtime_error(e.what());
     }
 }
 
@@ -44,5 +44,15 @@ json::value() const &
 void
 json::operator()(std::ostream& os) const
 { os << v_; }
+
+void
+check_paths(const jsonv::value& v, std::initializer_list<std::string> paths)
+{
+    for (const auto& p : paths) {
+        if (v.count_path(p) == 0) {
+            throw std::runtime_error("json path not found: " + p);
+        }
+    }
+}
 
 } // namesapce nx

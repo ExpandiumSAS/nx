@@ -171,8 +171,20 @@ public:
     route_cb PUT(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
-            c_.clear();
-            json(data) >> c_;
+            if (data.empty()) {
+                throw BadRequest("request body is empty");
+            }
+
+            auto old_c = c_;
+
+            try {
+                c_.clear();
+                json(data) >> c_;
+            } catch (const std::exception& e) {
+                c_ = std::move(old_c);
+
+                throw BadRequest("bad JSON data: ", e);
+            }
         };
     }
 
@@ -183,18 +195,22 @@ public:
             value_type item;
 
             if (data.empty()) {
-                throw BadRequest;
+                throw BadRequest("request body is empty");
             }
 
-            json(data) >> item;
+            try {
+                json(data) >> item;
 
-            item.id = id;
-            c_.emplace(id, item);
+                item.id = id;
+                c_.emplace(id, item);
 
-            rep
-                << Created
-                << header{ location, join("/", path_, id) }
-                ;
+                rep
+                    << Created
+                    << header{ location, join("/", path_, id) }
+                    ;
+            } catch (const std::exception& e) {
+                throw BadRequest("bad JSON data: ", e);
+            }
         };
     }
 
@@ -225,7 +241,12 @@ public:
             auto id = nx::to_num<id_type>(req.a("id"));
 
             value_type item;
-            json(data) >> item;
+
+            try {
+                json(data) >> item;
+            } catch (const std::exception& e) {
+                throw BadRequest("bad JSON data: ", e);
+            }
 
             item.id = id;
             c_[id] = item;

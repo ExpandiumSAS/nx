@@ -4,6 +4,7 @@
 #include <ostream>
 #include <unordered_map>
 #include <typeinfo>
+#include <initializer_list>
 
 #include <jsonv/parse.hpp>
 #include <jsonv/serialization.hpp>
@@ -102,6 +103,11 @@ public:
 private:
     jsonv::value v_;
 };
+
+
+NX_API
+void
+check_paths(const jsonv::value& v, std::initializer_list<std::string> paths);
 
 inline
 std::ostream&
