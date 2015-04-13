@@ -262,7 +262,7 @@ json_collection::put_collection(const jsonv::value& c)
         std::size_t id;
 
         try {
-            auto id = it->second.as_integer();
+            id = it->second.as_integer();
             c_[id] = v;
             handler(tags::on_item_added)(id);
         } catch (const std::exception& e) {
