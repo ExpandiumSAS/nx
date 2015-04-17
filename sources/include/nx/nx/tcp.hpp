@@ -110,7 +110,6 @@ connect(
 )
 {
     h.set_nonblocking();
-    h.set_reuseaddr();
     h.remote() = to;
 
     h[tags::on_drain] = [cb = std::move(cb)](Handle& h) {
