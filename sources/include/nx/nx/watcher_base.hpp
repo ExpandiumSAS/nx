@@ -19,12 +19,18 @@ public:
     using this_type = watcher_base<Derived, Watcher>;
     using watcher_event_cb = std::function<void(Derived&, int)>;
     using event_cb = std::function<void(int)>;
+    using watcher_func = void (*)(evloop, watcher_type*);
 
     struct on_watcher_events {};
     struct on_events {};
 
-    watcher_base() noexcept
-    : watcher_event_cb_(nullptr),
+    watcher_base(
+        watcher_func start_func,
+        watcher_func stop_func
+    ) noexcept
+    : start_func_(start_func),
+    stop_func_(stop_func),
+    watcher_event_cb_(nullptr),
     event_cb_(nullptr)
     {
         std::memset((void*) &w_, 0, sizeof(watcher_type));
@@ -39,10 +45,12 @@ public:
     this_type& operator=(const this_type& other) = delete;
 
     virtual ~watcher_base()
-    { stop(); }
+    {}
 
     this_type& operator=(this_type&& other)
     {
+        start_func_ = other.start_func_;
+        stop_func_ = other.stop_func_;
         watcher_event_cb_ = std::move(other.watcher_event_cb_);
         event_cb_ = std::move(other.event_cb_);
         std::memcpy((void*) &w_, (const void*) &other.w_, sizeof(watcher_type));
@@ -51,11 +59,19 @@ public:
         return *this;
     }
 
-    virtual void start() noexcept
-    {}
+    void start() noexcept
+    { async() << [&](evloop el) { start_func_(el, ptr()); }; }
 
-    virtual void stop() noexcept
-    {}
+    void stop() noexcept
+    { async() << [&](evloop el) { stop_func_(el, ptr()); }; }
+
+    void stop(void_cb&& on_stopped) noexcept
+    {
+        async() << [&,on_stopped = std::move(on_stopped)](evloop el) {
+            stop_func_(el, ptr());
+            on_stopped();
+        };
+    }
 
     Derived& operator=(watcher_event_cb&& cb)
     {
@@ -112,19 +128,21 @@ protected:
         return derived();
     }
 
-    void set(void_cb cb) noexcept
+    void modify(void_cb&& cb) noexcept
     {
-        bool active = is_active();
+        async() << [&,cb = std::move(cb)](evloop el) {
+            bool active = is_active();
 
-        if (active) {
-            stop();
-        }
+            if (active) {
+                stop_func_(el, ptr());
+            }
 
-        cb();
+            cb();
 
-        if (active) {
-            start();
-        }
+            if (active) {
+                start_func_(el, ptr());
+            }
+        };
     }
 
 private:
@@ -142,6 +160,8 @@ private:
     Derived const& derived() const
     { return *static_cast<Derived const*>(this); }
 
+    watcher_func start_func_;
+    watcher_func stop_func_;
     watcher_event_cb watcher_event_cb_;
     event_cb event_cb_;
     watcher_type w_;

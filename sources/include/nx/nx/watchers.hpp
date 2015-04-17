@@ -11,73 +11,52 @@ class io : public watcher_base<io, ev_io>
 {
 public:
     using base_type = watcher_base<io, ev_io>;
+    using base_type::start;
+    using base_type::stop;
     using base_type::operator=;
 
     io(int fd)
-    : base_type()
-    { (*this)(fd, 0); }
-
-    virtual void start() noexcept
-    { async() << [&](evloop el) { ev_io_start(el, ptr()); }; }
-
-    virtual void stop() noexcept
-    { async() << [&](evloop el) { ev_io_stop(el, ptr()); }; }
-
-    void stop(void_cb stopped_cb) noexcept
+    : base_type(ev_io_start, ev_io_stop)
     {
-        async() << loop_op{
-            [&](evloop el) { ev_io_stop(el, ptr()); },
-            [=]() { stopped_cb(); }
-        };
-    }
-
-    io& operator()(int fd, int events) noexcept
-    {
-        set([&](){ ev_io_set(ptr(), fd, events); });
-        return *this;
+        w().fd = fd;
+        (*this)(0);
     }
 
     io& operator()(int events) noexcept
-    { return (*this)(w().fd, events); }
+    {
+        modify([&,events](){ ev_io_set(ptr(), w().fd, events); });
+
+        return *this;
+    }
 
     io& operator|=(int events) noexcept
-    { return (*this)(w().fd, w().events | events); }
+    { return (*this)(w().events | events); }
 
     io& operator^=(int events) noexcept
-    { return (*this)(w().fd, w().events & ~events); }
-
-    void start(int fd, int events) noexcept
-    {
-        (*this)(fd, events);
-        start();
-    }
+    { return (*this)(w().events & ~events); }
 };
 
 class timer : public watcher_base<timer, ev_timer>
 {
 public:
     using base_type = watcher_base<timer, ev_timer>;
+    using base_type::start;
+    using base_type::stop;
     using base_type::operator=;
 
     timer()
-    : base_type()
+    : base_type(ev_timer_start, ev_timer_stop)
     {}
-
-    virtual void start() noexcept
-    { async() << [&](evloop el) { ev_timer_start(el, ptr()); }; }
-
-    virtual void stop() noexcept
-    { async() << [&](evloop el) { ev_timer_stop(el, ptr()); }; }
 
     timer& operator()(timestamp after, timestamp repeat = 0.) noexcept
     {
-        set([&](){ ev_timer_set(ptr(), after, repeat); });
+        modify([&,after,repeat](){ ev_timer_set(ptr(), after, repeat); });
         return *this;
     }
 
     void start(timestamp after, timestamp repeat = 0.) noexcept
     {
-        set([&](){ ev_timer_set(ptr(), after, repeat); });
+        modify([&,after,repeat](){ ev_timer_set(ptr(), after, repeat); });
         start();
     }
 

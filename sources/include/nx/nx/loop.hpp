@@ -4,7 +4,6 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <functional>
 #include <unordered_set>
 
 #include <moodycamel/concurrent_queue.hpp>
@@ -14,12 +13,6 @@
 #include <nx/handle_base.hpp>
 
 namespace nx {
-
-using evloop = struct ev_loop*;
-using timestamp = ev_tstamp;
-
-using loop_cb = std::function<void(evloop)>;
-using void_cb = std::function<void()>;
 
 struct loop_op
 {

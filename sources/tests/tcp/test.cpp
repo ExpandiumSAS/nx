@@ -47,6 +47,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
 
     std::atomic_bool connected{ false };
     std::atomic_bool got_reply{ false };
+    std::atomic_bool got_correct_reply{ false };
     std::atomic_bool disconnected{ false };
 
     auto& c = nx::connect<nx::tcp>(
@@ -63,11 +64,13 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     );
 
     c[on_read] = [&](nx::tcp& t) {
+        got_reply = true;
+
         std::string str;
         t >> str;
 
         std::reverse(str.begin(), str.end());
-        got_reply = (str == msg);
+        got_correct_reply = (str == msg);
 
         deadline.stop();
         cv.notify();
@@ -79,6 +82,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     BOOST_CHECK_MESSAGE(got_new_connection, "server got a connection");
     BOOST_CHECK_MESSAGE(got_msg, "server got correct message");
     BOOST_CHECK_MESSAGE(connected, "client connected to server");
-    BOOST_CHECK_MESSAGE(got_reply, "client got correct reply");
+    BOOST_CHECK_MESSAGE(got_reply, "client got a reply");
+    BOOST_CHECK_MESSAGE(got_correct_reply, "client got correct reply");
     BOOST_CHECK_MESSAGE(disconnected, "client was disconnected");
 }

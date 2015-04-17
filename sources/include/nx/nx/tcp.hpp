@@ -109,7 +109,7 @@ connect(
     Connected&& cb
 )
 {
-    // h.set_nonblocking();
+    h.set_nonblocking();
     h.set_reuseaddr();
     h.remote() = to;
 
@@ -127,9 +127,6 @@ connect(
 
     if (rc != 0 && errno != EINPROGRESS) {
         handle_error(h, "connect error", errno);
-    } else {
-        h.set_nonblocking();
-        h.start_write();
     }
 
     return h;

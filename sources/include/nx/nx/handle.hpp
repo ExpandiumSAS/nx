@@ -79,7 +79,13 @@ public:
     handle(int fh) noexcept
     : fh_(fh),
     io_(fh)
-    { set_io_cb(); }
+    {
+        if (fh == 0) {
+            std::cout << "WTF ?" << std::endl;
+        }
+
+        set_io_cb();
+    }
 
     handle(this_type&& other) noexcept
     : fh_(other.fh_),
@@ -93,6 +99,10 @@ public:
     rbuf_(std::move(other.rbuf_)),
     read_size_(other.read_size_)
     {
+        if (fh_ == 0) {
+            std::cout << "WTF AGAIN ?" << std::endl;
+        }
+
         set_io_cb();
         other.fh_ = -1;
         other.closed_ = true;
