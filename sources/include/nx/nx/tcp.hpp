@@ -112,16 +112,8 @@ connect(
     h.set_nonblocking();
     h.remote() = to;
 
-    std::cout
-            << "TCP: " << h.fh() << " connecting to " << to
-            << std::endl;
-
     h[tags::on_writable] = [cb = std::move(cb)](Handle& h) {
         // Socket is writable (connected)
-        std::cout
-            << "TCP: " << h.fh() << " on_writable (connected)"
-            << std::endl;
-
         h.write_notify_only(false);
         h.update_endpoints();
         cb(h);

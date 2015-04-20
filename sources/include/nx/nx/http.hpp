@@ -91,9 +91,6 @@ connect(const endpoint& ep, request req, OnReply&& cb)
             h,
             ep,
             [](http& t) {
-                std::cout
-                    << "HTTP: " << t.fh() << " connected, send_request"
-                    << std::endl;
                 t.send_request();
             }
         );

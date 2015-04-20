@@ -22,6 +22,19 @@ public:
         (*this)(0);
     }
 
+    io(io&& other)
+    { *this = std::move(other); }
+
+    io(const io& other) = delete;
+    io& operator=(const io& other) = delete;
+
+    io& operator=(io&& other)
+    {
+        base_type::operator=(std::forward<base_type>(other));
+
+        return *this;
+    }
+
     io& operator()(int events) noexcept
     {
         modify([&,events](){ ev_io_set(ptr(), w().fd, events); });
@@ -47,6 +60,19 @@ public:
     timer()
     : base_type(ev_timer_start, ev_timer_stop)
     {}
+
+    timer(timer&& other)
+    { *this = std::move(other); }
+
+    timer(const timer& other) = delete;
+    timer& operator=(const timer& other) = delete;
+
+    timer& operator=(timer&& other)
+    {
+        base_type::operator=(std::forward<base_type>(other));
+
+        return *this;
+    }
 
     timer& operator()(timestamp after, timestamp repeat = 0.) noexcept
     {

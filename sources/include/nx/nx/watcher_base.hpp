@@ -24,6 +24,13 @@ public:
     struct on_watcher_events {};
     struct on_events {};
 
+    watcher_base()
+    : start_func_(nullptr),
+    stop_func_(nullptr),
+    watcher_event_cb_(nullptr),
+    event_cb_(nullptr)
+    {}
+
     watcher_base(
         watcher_func start_func,
         watcher_func stop_func

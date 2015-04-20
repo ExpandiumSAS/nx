@@ -275,10 +275,6 @@ private:
     void set_io_cb()
     {
         io_ = [&](int events) {
-            std::cout
-                << "H: " << fh_ << " " << std::hex << events
-                << std::endl;
-
             if (events & NX_ERROR) {
                 handle_error(derived(), "read/write error", errno);
                 return;
@@ -296,15 +292,7 @@ private:
 
     void handle_read()
     {
-        std::cout
-                << "H: " << fh_ << " handle_read"
-                << std::endl;
-
         if (read_notify_only_) {
-            std::cout
-                << "H: " << fh_ << " read_notify_only"
-                << std::endl;
-
             handler(tags::on_readable)(derived());
 
             return;
@@ -343,15 +331,7 @@ private:
 
     void handle_write()
     {
-        std::cout
-                << "H: " << fh_ << " handle_write"
-                << std::endl;
-
         if (write_notify_only_) {
-            std::cout
-                << "H: " << fh_ << " write_notify_only"
-                << std::endl;
-
             handler(tags::on_writable)(derived());
 
             return;
@@ -396,10 +376,6 @@ private:
         if (closed_) {
             return;
         }
-
-        std::cout
-                << "H: " << fh_ << " closing"
-                << std::endl;
 
         closed_ = true;
 
