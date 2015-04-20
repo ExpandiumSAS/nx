@@ -69,15 +69,20 @@ loop::~loop()
 bool
 loop::run(int flags)
 {
-    loop_op op;
+    const std::size_t max_ops = 100;
 
-    while (q_.try_dequeue(op)) {
-        if (op.cb) {
-            op.cb(l_);
+    loop_op ops[max_ops];
+    std::size_t count = 0;
+
+    count = q_.try_dequeue_bulk(ops, max_ops);
+
+    for (std::size_t i = 0; i < count; i++) {
+        if (ops[i].cb) {
+            ops[i].cb(l_);
         }
 
-        if (op.h) {
-            op.h();
+        if (ops[i].h) {
+            ops[i].h();
         }
     }
 
