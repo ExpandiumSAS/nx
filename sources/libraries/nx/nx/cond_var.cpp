@@ -1,4 +1,5 @@
 #include <nx/cond_var.hpp>
+#include <chrono>
 
 namespace nx {
 
@@ -38,6 +39,15 @@ cond_var::wait()
     std::unique_lock<mutex_type> lk(m_);
 
     cv_.wait(lk, [this]{ return ready_; });
+}
+
+bool
+cond_var::wait_for(uint64_t ms)
+{
+    std::unique_lock<mutex_type> lk(m_);
+
+    cv_.wait_for(lk, std::chrono::milliseconds(ms), [this]{ return ready_; });
+    return ready_;
 }
 
 } // namespace nx

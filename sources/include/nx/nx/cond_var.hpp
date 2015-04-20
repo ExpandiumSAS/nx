@@ -16,6 +16,7 @@ public:
     void notify();
     void notify_all();
     void wait();
+    bool wait_for(uint64_t ms);
 
 private:
     using mutex_type = std::recursive_mutex;
