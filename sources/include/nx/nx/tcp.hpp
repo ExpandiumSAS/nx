@@ -112,14 +112,24 @@ connect(
     h.set_nonblocking();
     h.remote() = to;
 
-    h[tags::on_drain] = [cb = std::move(cb)](Handle& h) {
+    std::cout
+            << "TCP: " << h.fh() << " connecting to " << to
+            << std::endl;
+
+    h[tags::on_writable] = [cb = std::move(cb)](Handle& h) {
         // Socket is writable (connected)
+        std::cout
+            << "TCP: " << h.fh() << " on_writable (connected)"
+            << std::endl;
+
+        h.write_notify_only(false);
         h.update_endpoints();
         cb(h);
         h.start_read();
-        h[tags::on_drain] = nullptr;
+        h[tags::on_writable] = nullptr;
     };
 
+    h.write_notify_only(true);
     h.start_write();
 
     int rc = ::connect(h.fh(), h.remote(), h.remote().size());
@@ -202,7 +212,8 @@ serve(
             }
         };
 
-        h.start_read(true);
+        h.read_notify_only(true);
+        h.start_read();
     }
 
     return h.local();

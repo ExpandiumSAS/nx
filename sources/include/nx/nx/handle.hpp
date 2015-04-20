@@ -27,6 +27,7 @@ namespace tags {
 struct on_error_tag : callback_tag {};
 struct on_read_tag : callback_tag {};
 struct on_readable_tag : callback_tag {};
+struct on_writable_tag : callback_tag {};
 struct on_drain_tag : callback_tag {};
 struct on_eof_tag : callback_tag {};
 struct on_close_tag : callback_tag {};
@@ -34,6 +35,7 @@ struct on_close_tag : callback_tag {};
 const on_error_tag on_error = {};
 const on_read_tag on_read = {};
 const on_readable_tag on_readable = {};
+const on_writable_tag on_writable = {};
 const on_drain_tag on_drain = {};
 const on_eof_tag on_eof = {};
 const on_close_tag on_close = {};
@@ -70,6 +72,7 @@ public:
         callback<tags::on_error_tag, Derived&, const error_code&>,
         callback<tags::on_read_tag, Derived&>,
         callback<tags::on_readable_tag, Derived&>,
+        callback<tags::on_writable_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
         callback<tags::on_eof_tag, Derived&>,
         callback<tags::on_close_tag, Derived&>,
@@ -79,18 +82,13 @@ public:
     handle(int fh) noexcept
     : fh_(fh),
     io_(fh)
-    {
-        if (fh == 0) {
-            std::cout << "WTF ?" << std::endl;
-        }
-
-        set_io_cb();
-    }
+    { set_io_cb(); }
 
     handle(this_type&& other) noexcept
     : fh_(other.fh_),
     io_(std::move(other.io_)),
-    notify_only_(other.notify_only_.load()),
+    read_notify_only_(other.read_notify_only_.load()),
+    write_notify_only_(other.write_notify_only_.load()),
     closing_(other.closing_.load()),
     closed_(other.closed_.load()),
     eof_(other.eof_.load()),
@@ -99,10 +97,6 @@ public:
     rbuf_(std::move(other.rbuf_)),
     read_size_(other.read_size_)
     {
-        if (fh_ == 0) {
-            std::cout << "WTF AGAIN ?" << std::endl;
-        }
-
         set_io_cb();
         other.fh_ = -1;
         other.closed_ = true;
@@ -120,7 +114,8 @@ public:
         fh_ = other.fh_;
         io_ = std::move(other.io_);
         set_io_cb();
-        notify_only_ = other.notify_only_.load();
+        read_notify_only_ = other.read_notify_only_.load();
+        write_notify_only_ = other.write_notify_only_.load();
         closing_ = other.closing_.load();
         closed_ = other.closed_.load();
         eof_ = other.eof_.load();
@@ -222,12 +217,17 @@ public:
         return *this;
     }
 
-    void start_read(bool notify_only = false)
+    void read_notify_only(bool flag)
+    { read_notify_only_ = flag; }
+
+    void start_read()
     {
-        notify_only_ = notify_only;
         io_ |= NX_READ;
         io_.start();
     }
+
+    void write_notify_only(bool flag)
+    { write_notify_only_ = flag; }
 
     void start_write()
     {
@@ -275,6 +275,10 @@ private:
     void set_io_cb()
     {
         io_ = [&](int events) {
+            std::cout
+                << "H: " << fh_ << " " << std::hex << events
+                << std::endl;
+
             if (events & NX_ERROR) {
                 handle_error(derived(), "read/write error", errno);
                 return;
@@ -292,7 +296,15 @@ private:
 
     void handle_read()
     {
-        if (notify_only_) {
+        std::cout
+                << "H: " << fh_ << " handle_read"
+                << std::endl;
+
+        if (read_notify_only_) {
+            std::cout
+                << "H: " << fh_ << " read_notify_only"
+                << std::endl;
+
             handler(tags::on_readable)(derived());
 
             return;
@@ -331,6 +343,20 @@ private:
 
     void handle_write()
     {
+        std::cout
+                << "H: " << fh_ << " handle_write"
+                << std::endl;
+
+        if (write_notify_only_) {
+            std::cout
+                << "H: " << fh_ << " write_notify_only"
+                << std::endl;
+
+            handler(tags::on_writable)(derived());
+
+            return;
+        }
+
         if (wq_.empty()) {
             if (closing_) {
                 close();
@@ -371,6 +397,10 @@ private:
             return;
         }
 
+        std::cout
+                << "H: " << fh_ << " closing"
+                << std::endl;
+
         closed_ = true;
 
         io_.stop(
@@ -399,7 +429,8 @@ private:
 
     int fh_;
     io io_;
-    std::atomic_bool notify_only_{false};
+    std::atomic_bool read_notify_only_{false};
+    std::atomic_bool write_notify_only_{false};
     std::atomic_bool closing_{false};
     std::atomic_bool closed_{false};
     std::atomic_bool eof_{false};
