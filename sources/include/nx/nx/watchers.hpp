@@ -90,6 +90,47 @@ public:
     { async() << [&](evloop el) { ev_timer_again(el, ptr()); }; }
 };
 
+class periodic : public watcher_base<periodic, ev_periodic>
+{
+public:
+    using base_type = watcher_base<periodic, ev_periodic>;
+    using base_type::start;
+    using base_type::stop;
+    using base_type::operator=;
+
+    periodic()
+    : base_type(ev_periodic_start, ev_periodic_stop)
+    {}
+
+    periodic(periodic&& other)
+    { *this = std::move(other); }
+
+    periodic(const periodic& other) = delete;
+    periodic& operator=(const periodic& other) = delete;
+
+    periodic& operator=(periodic&& other)
+    {
+        base_type::operator=(std::forward<base_type>(other));
+
+        return *this;
+    }
+
+    periodic& operator()(timestamp at, timestamp interval = 0.) noexcept
+    {
+        modify([&,at,interval](){ ev_periodic_set(ptr(), at, interval, 0); });
+        return *this;
+    }
+
+    void start(timestamp at, timestamp interval = 0.) noexcept
+    {
+        modify([&,at,interval](){ ev_periodic_set(ptr(), at, interval, 0); });
+        start();
+    }
+
+    void again() noexcept
+    { async() << [&](evloop el) { ev_periodic_again(el, ptr()); }; }
+};
+
 } // namespace nx
 
 #endif // __NX_WATCHERS_H__

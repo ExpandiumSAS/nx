@@ -17,16 +17,19 @@ class watcher_base
 public:
     using watcher_type = Watcher;
     using this_type = watcher_base<Derived, Watcher>;
+    using watcher_cb = std::function<void(Derived&)>;
     using watcher_event_cb = std::function<void(Derived&, int)>;
     using event_cb = std::function<void(int)>;
     using watcher_func = void (*)(evloop, watcher_type*);
 
+    struct on_watcher {};
     struct on_watcher_events {};
     struct on_events {};
 
     watcher_base()
     : start_func_(nullptr),
     stop_func_(nullptr),
+    watcher_cb_(nullptr),
     watcher_event_cb_(nullptr),
     event_cb_(nullptr)
     {}
@@ -37,6 +40,7 @@ public:
     ) noexcept
     : start_func_(start_func),
     stop_func_(stop_func),
+    watcher_cb_(nullptr),
     watcher_event_cb_(nullptr),
     event_cb_(nullptr)
     {
@@ -58,6 +62,7 @@ public:
     {
         start_func_ = other.start_func_;
         stop_func_ = other.stop_func_;
+        watcher_cb_ = std::move(other.watcher_cb_);
         watcher_event_cb_ = std::move(other.watcher_event_cb_);
         event_cb_ = std::move(other.event_cb_);
         std::memcpy((void*) &w_, (const void*) &other.w_, sizeof(watcher_type));
@@ -78,6 +83,20 @@ public:
             stop_func_(el, ptr());
             on_stopped();
         };
+    }
+
+    Derived& operator=(watcher_cb&& cb)
+    {
+        watcher_cb_ = std::move(cb);
+
+        set_cb(
+            [](auto l, watcher_type* w, int revents) {
+                auto& me = watcher_cast<this_type>(w);
+                callback_access::call<on_watcher>(me);
+            }
+        );
+
+        return derived();
     }
 
     Derived& operator=(watcher_event_cb&& cb)
@@ -155,6 +174,9 @@ protected:
 private:
     friend callback_access;
 
+    void operator()(const on_watcher& tag)
+    { watcher_cb_(derived()); }
+
     void operator()(const on_watcher_events& tag, int revents)
     { watcher_event_cb_(derived(), revents); }
 
@@ -169,6 +191,7 @@ private:
 
     watcher_func start_func_;
     watcher_func stop_func_;
+    watcher_cb watcher_cb_;
     watcher_event_cb watcher_event_cb_;
     event_cb event_cb_;
     watcher_type w_;
