@@ -22,6 +22,7 @@ public:
     using event_cb = std::function<void(int)>;
     using watcher_func = void (*)(evloop, watcher_type*);
 
+    struct on_void {};
     struct on_watcher {};
     struct on_watcher_events {};
     struct on_events {};
@@ -29,6 +30,7 @@ public:
     watcher_base()
     : start_func_(nullptr),
     stop_func_(nullptr),
+    void_cb_(nullptr),
     watcher_cb_(nullptr),
     watcher_event_cb_(nullptr),
     event_cb_(nullptr)
@@ -40,6 +42,7 @@ public:
     ) noexcept
     : start_func_(start_func),
     stop_func_(stop_func),
+    void_cb_(nullptr),
     watcher_cb_(nullptr),
     watcher_event_cb_(nullptr),
     event_cb_(nullptr)
@@ -62,6 +65,7 @@ public:
     {
         start_func_ = other.start_func_;
         stop_func_ = other.stop_func_;
+        void_cb_ = std::move(other.void_cb_);
         watcher_cb_ = std::move(other.watcher_cb_);
         watcher_event_cb_ = std::move(other.watcher_event_cb_);
         event_cb_ = std::move(other.event_cb_);
@@ -83,6 +87,20 @@ public:
             stop_func_(el, ptr());
             on_stopped();
         };
+    }
+
+    Derived& operator=(void_cb&& cb)
+    {
+        void_cb_ = std::move(cb);
+
+        set_cb(
+            [](auto l, watcher_type* w, int revents) {
+                auto& me = watcher_cast<this_type>(w);
+                callback_access::call<on_void>(me);
+            }
+        );
+
+        return derived();
     }
 
     Derived& operator=(watcher_cb&& cb)
@@ -174,6 +192,9 @@ protected:
 private:
     friend callback_access;
 
+    void operator()(const on_void& tag)
+    { void_cb_(); }
+
     void operator()(const on_watcher& tag)
     { watcher_cb_(derived()); }
 
@@ -191,6 +212,7 @@ private:
 
     watcher_func start_func_;
     watcher_func stop_func_;
+    void_cb void_cb_;
     watcher_cb watcher_cb_;
     watcher_event_cb watcher_event_cb_;
     event_cb event_cb_;
