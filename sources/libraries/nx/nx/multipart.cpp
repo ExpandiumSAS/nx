@@ -236,7 +236,7 @@ void
 multipart_parser::on_headers_complete()
 {
     auto& p = parts_.back();
-    auto& cd = p.h[content_disposition_lc];
+    auto& cd = p.h[content_disposition];
 
     if (cd.find("form-data;") == 0) {
         cd.erase(0, 10);

@@ -40,12 +40,17 @@ public:
 
     std::string& h(const std::string& name);
     const std::string& h(const std::string& name) const;
+    bool has(const header& h) const;
+    bool has(const std::string& name) const;
 
     std::string& a(const std::string& name);
     const std::string& a(const std::string& name) const;
 
     std::ostringstream& data();
     std::string content() const;
+
+    bool operator==(const nx::method& m) const;
+    bool operator!=(const nx::method& m) const;
 
     request& operator/(const std::string& path);
 
@@ -65,7 +70,6 @@ public:
         return *this;
     }
 
-    bool is(const nx::method& m) const;
     bool is_form() const;
 
 private:

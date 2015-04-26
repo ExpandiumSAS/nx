@@ -93,8 +93,8 @@ request::parse(buffer& b)
         }
 
         // Grab common useful header values
-        if (headers_.has(content_length_lc)) {
-            content_length_ = to_num<std::size_t>(headers_[content_length_lc]);
+        if (headers_.has(nx::content_length)) {
+            content_length_ = to_num<std::size_t>(headers_[nx::content_length]);
         }
 
         raw_headers_ptr_.reset();
@@ -129,6 +129,14 @@ request::h(const std::string& name)
 const std::string&
 request::h(const std::string& name) const
 { return headers_[name]; }
+
+bool
+request::has(const header& h) const
+{ return headers_.has(h.name) && headers_[h.name] == h.value; }
+
+bool
+request::has(const std::string& name) const
+{ return headers_.has(name); }
 
 std::string&
 request::a(const std::string& name)
@@ -166,6 +174,14 @@ request::content() const
 
     return oss.str();
 }
+
+bool
+request::operator==(const nx::method& m) const
+{ return method_ == m.str; }
+
+bool
+request::operator!=(const nx::method& m) const
+{ return !(*this == m); }
 
 request&
 request::operator/(const std::string& path)
@@ -238,16 +254,12 @@ request::operator<<(const jsonv::value& v)
 }
 
 bool
-request::is(const nx::method& m) const
-{ return method_ == m.str; }
-
-bool
 request::is_form() const
 {
     return
-        is(POST)
+        *this == POST
         &&
-        h(content_type_lc) == "application/x-www-form-urlencoded"
+        h(content_type) == "application/x-www-form-urlencoded"
         ;
 }
 

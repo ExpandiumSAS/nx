@@ -43,6 +43,9 @@ public:
 const http_status BadResponse = { 0, "Bad Response" };
 const http_status InternalClientError = { 1, "Internal client error" };
 
+// 1xx - Info
+const http_status SwitchingProtocols = { 101, "Switching Protocols" };
+
 // 2xx - Success
 const http_status OK = { 200, "OK" };
 const http_status Created = { 201, "Created" };

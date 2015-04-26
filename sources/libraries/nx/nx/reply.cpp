@@ -72,8 +72,8 @@ reply::parse(buffer& b)
         }
 
         // Grab common useful header values
-        if (headers_.has(content_length_lc)) {
-            content_length_ = to_num<std::size_t>(headers_[content_length_lc]);
+        if (headers_.has(nx::content_length)) {
+            content_length_ = to_num<std::size_t>(headers_[nx::content_length]);
         }
 
         raw_headers_ptr_.reset();
