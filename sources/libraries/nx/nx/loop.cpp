@@ -48,6 +48,24 @@ loop::unregister_handle(handle_ptr p)
     handles_.erase(p);
 }
 
+void
+register_watcher(watcher_ptr p)
+{
+    std::lock_guard<std::mutex> g(wm_);
+
+    watchers_.insert(p);
+}
+
+NX_API
+void
+unregister_watcher(watcher_ptr p)
+{
+    std::lock_guard<std::mutex> g(wm_);
+
+    watchers_.erase(p);
+}
+
+
 loop::loop()
 : l_(ev_default_loop(EVFLAG_FORKCHECK))
 {

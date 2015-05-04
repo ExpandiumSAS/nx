@@ -60,6 +60,8 @@ private:
     queue_type q_;
     handle_set handles_;
     std::mutex hm_;
+    watcher_set watchers_;
+    std::mutex wm_;
 };
 
 NX_API
@@ -78,6 +80,14 @@ NX_API
 void
 unregister_handle(handle_ptr p);
 
+NX_API
+void
+register_watcher(watcher_ptr p);
+
+NX_API
+void
+unregister_watcher(watcher_ptr p);
+
 template <typename Handle, typename... Args>
 std::shared_ptr<Handle>
 new_handle(Args&&... args)
@@ -85,6 +95,17 @@ new_handle(Args&&... args)
     auto p = std::make_shared<Handle>(std::forward<Args>(args)...);
 
     register_handle(p);
+
+    return p;
+}
+
+template <typename Watcher, typename... Args>
+std::shared_ptr<Watcher>
+new_watcher(Args&&... args)
+{
+    auto p = std::make_shared<Watcher>(std::forward<Args>(args)...);
+
+    register_watcher(p);
 
     return p;
 }
