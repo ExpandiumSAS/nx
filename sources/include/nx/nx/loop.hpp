@@ -11,6 +11,7 @@
 #include <nx/config.h>
 #include <nx/ev.hpp>
 #include <nx/handle_base.hpp>
+#include <nx/watcher_base.hpp>
 
 namespace nx {
 
@@ -37,6 +38,9 @@ public:
 
     void register_handle(handle_ptr p);
     void unregister_handle(handle_ptr p);
+
+    void register_watcher(watcher_ptr p);
+    void unregister_watcher(watcher_ptr p);
 
 private:
 

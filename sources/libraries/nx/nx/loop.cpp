@@ -49,7 +49,7 @@ loop::unregister_handle(handle_ptr p)
 }
 
 void
-register_watcher(watcher_ptr p)
+loop::register_watcher(watcher_ptr p)
 {
     std::lock_guard<std::mutex> g(wm_);
 
@@ -58,7 +58,7 @@ register_watcher(watcher_ptr p)
 
 NX_API
 void
-unregister_watcher(watcher_ptr p)
+loop::unregister_watcher(watcher_ptr p)
 {
     std::lock_guard<std::mutex> g(wm_);
 
@@ -193,5 +193,13 @@ register_handle(handle_ptr p)
 void
 unregister_handle(handle_ptr p)
 { loop::get().unregister_handle(p); }
+
+void
+register_watcher(watcher_ptr p)
+{ loop::get().register_watcher(p); }
+
+void
+unregister_watcher(watcher_ptr p)
+{ loop::get().unregister_watcher(p); }
 
 } // namespace nx

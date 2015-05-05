@@ -1,4 +1,5 @@
 #include <nx/watchers.hpp>
+#include <nx/loop.hpp>
 
 namespace nx {
 
@@ -9,10 +10,15 @@ after::after(timestamp timeout)
 after&
 after::operator<<(void_cb&& cb)
 {
-    async() << [cb = std::move(cb), timeout_](evloop el) {
-        ev_once(
-        );
+    auto ptr = new_watcher<timer>();
+    auto& w = *ptr;
+
+    w = [cb = std::move(cb), ptr]() {
+        unregister_watcher(ptr);
+        cb();
     };
+
+    w.start(timeout_);
 
     return *this;
 }
