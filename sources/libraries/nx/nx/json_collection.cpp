@@ -252,6 +252,8 @@ json_collection::put_collection(const jsonv::value& c)
     std::size_t error_count = 0;
     std::ostringstream oss;
 
+    id_ = 0;
+
     for (auto& v : c.as_array()) {
         auto it = v.find("id");
 
@@ -265,6 +267,7 @@ json_collection::put_collection(const jsonv::value& c)
             id = it->second.as_integer();
             c_[id] = v;
             handler(tags::on_item_added)(id);
+            id_ = id > id_ ? id : id_;
         } catch (const std::exception& e) {
             // Bad item
             c_.erase(id);
