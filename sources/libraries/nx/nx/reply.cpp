@@ -117,7 +117,7 @@ reply::content() const
     auto body = data_.str();
     auto hdrs = headers_;
 
-    hdrs << header(nx::content_length, std::to_string(body.size()));
+    hdrs << header(nx::Content_Length, std::to_string(body.size()));
 
     oss
         << "HTTP/1.1 "
