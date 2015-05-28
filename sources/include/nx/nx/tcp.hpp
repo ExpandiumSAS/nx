@@ -5,47 +5,33 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <memory>
 #include <functional>
 
-#include <nx/handle.hpp>
-#include <nx/endpoint.hpp>
+#include <boost/asio.hpp>
+
 #include <nx/callback_access.hpp>
 
 namespace nx {
 
+using namespace asio = boost::asio;
+
 template <typename Derived, typename... Callbacks>
-class tcp_base
-: public handle<
-    Derived,
-    Callbacks...
->
+class tcp
+: public std::enable_shared_from_this<tcp<Derived, Callbacks...>>
 {
 public:
-    using base_type = handle<
-        Derived,
-        Callbacks...
-    >;
-    using this_type = tcp_base<Derived, Callbacks...>;
+    using this_type = tcp<Derived, Callbacks...>;
 
-    tcp_base()
-    : base_type(socket(PF_INET, SOCK_STREAM, 0))
-    {}
+    tcp(const tcp& other) = delete;
+    tcp& operator=(const tcp& other) = delete;
 
-    tcp_base(int fh)
-    : base_type(fh)
-    { update_endpoints(); }
-
-    tcp_base(this_type&& other)
-    : base_type(std::forward<base_type>(other)),
-    local_(std::move(other.local_)),
-    remote_(std::move(other.remote_))
+    explicit tcp(const std::string& address, const std::string& port)
     {}
 
     virtual ~tcp_base()
     {}
 
-    tcp_base(const this_type& other) = delete;
-    this_type& operator=(const this_type& other) = delete;
 
     this_type& operator=(this_type&& other)
     {
@@ -90,15 +76,8 @@ public:
     }
 
 private:
-    endpoint local_;
-    endpoint remote_;
-};
 
-class tcp : public tcp_base<tcp>
-{
-    using base_type = tcp_base<tcp>;
 
-    using base_type::tcp_base;
 };
 
 template <typename Handle, typename Connected>
