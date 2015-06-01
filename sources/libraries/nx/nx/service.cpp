@@ -23,6 +23,30 @@ work_(service_),
 t_()
 { start(); }
 
+asio::io_service&
+service::io_service()
+{ return io_service_; }
+
+const asio::io_service&
+service::io_service() const
+{ return io_service_; }
+
+void
+service::register(socket_ptr sptr)
+{
+    std::lock_guard<std::mutex> lock(sockets_mutex_);
+
+    sockets_.insert(sptr);
+}
+
+void
+service::unregister(socket_ptr sptr)
+{
+    std::lock_guard<std::mutex> lock(sockets_mutex_);
+
+    sockets_.erase(sptr);
+}
+
 void
 service::start()
 {
@@ -31,7 +55,7 @@ service::start()
         return;
     }
 
-    t_ = std::thread([this]() { service_.run(); });
+    t_ = std::thread([this]() { io_service_.run(); });
 }
 
 void
@@ -42,9 +66,9 @@ service::stop()
         return;
     }
 
-    service_.stop();
+    io_service_.stop();
     t_.join();
-    service_.reset();
+    io_service_.reset();
 }
 
 } // namespace nx
