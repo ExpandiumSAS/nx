@@ -30,7 +30,9 @@ socket::stop()
 
 void
 socket::read()
-{}
+{
+
+}
 
 void
 socket::write()
