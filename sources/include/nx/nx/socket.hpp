@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 
 #include <nx/config.h>
+#include <nx/buffer.hpp>
 
 namespace nx {
 
@@ -34,6 +35,8 @@ private:
 
     service& s_;
     asio::ip::tcp::socket socket_;
+    buffer rbuf_;
+    buffers wbufs_;
 };
 
 using socket_ptr = std::shared_ptr<socket>;

@@ -13,6 +13,7 @@ namespace nx {
 
 /// Read/write buffer
 using buffer = std::vector<char>;
+using buffers = std::vector<buffer>;
 
 /// Generic output iterator-based streaming support
 ///
