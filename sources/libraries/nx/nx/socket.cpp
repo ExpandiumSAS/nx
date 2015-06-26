@@ -36,11 +36,10 @@ socket::read()
     socket_.async_read_some(
         boost::asio::buffer(buffer_),
         [this, self](boost::system::error_code ec, std::size_t count) {
-
-        if (!ec) {
-            request_parser::result_type result;
-          std::tie(result, std::ignore) = request_parser_.parse(
-              request_, buffer_.data(), buffer_.data() + bytes_transferred);
+            if (!ec) {
+                request_parser::result_type result;
+                std::tie(result, std::ignore) = request_parser_.parse(
+                  request_, buffer_.data(), buffer_.data() + bytes_transferred);
 
           if (result == request_parser::good)
           {
@@ -59,7 +58,7 @@ socket::read()
         } else if (ec != boost::asio::error::operation_aborted) {
             connection_manager_.stop(shared_from_this());
         }
-    }
+        }
     );
 }
 
