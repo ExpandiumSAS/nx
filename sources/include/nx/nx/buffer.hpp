@@ -4,6 +4,7 @@
 #include <cstring>
 #include <ostream>
 #include <vector>
+#include <queue>
 
 namespace nx {
 
@@ -14,6 +15,7 @@ namespace nx {
 /// Read/write buffer
 using buffer = std::vector<char>;
 using buffers = std::vector<buffer>;
+using buffer_queue = std::queue<buffer>;
 
 /// Generic output iterator-based streaming support
 ///

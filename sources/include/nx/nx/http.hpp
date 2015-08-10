@@ -23,14 +23,6 @@ public:
     using base_type = tcp_base<http>;
     using this_type = http;
 
-    http();
-    http(int fh);
-    http(const http& other) = delete;
-    http(http&& other);
-    virtual ~http();
-
-    http& operator=(http&& other);
-
     void process_request();
     void process_reply();
     void send_request();
@@ -46,7 +38,7 @@ private:
     bool request_parsed();
     bool reply_parsed();
 
-    bool parsed_;
+    bool parsed_ = false;
     request req_;
     reply rep_;
     request_cb request_cb_;
@@ -74,7 +66,7 @@ template <typename OnReply>
 http&
 connect(const endpoint& ep, request req, OnReply&& cb)
 {
-    auto p = new_handle<http>();
+    auto p = new_socket<http>();
     auto& h = *p;
 
     h

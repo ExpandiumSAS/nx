@@ -18,8 +18,8 @@ service::get()
 }
 
 service::service()
-: service_(),
-work_(service_),
+: io_service_(),
+work_(io_service_),
 t_()
 { start(); }
 
@@ -32,7 +32,7 @@ service::io_service() const
 { return io_service_; }
 
 void
-service::register(socket_ptr sptr)
+service::add(socket_ptr sptr)
 {
     std::lock_guard<std::mutex> lock(sockets_mutex_);
 
@@ -40,7 +40,7 @@ service::register(socket_ptr sptr)
 }
 
 void
-service::unregister(socket_ptr sptr)
+service::remove(socket_ptr sptr)
 {
     std::lock_guard<std::mutex> lock(sockets_mutex_);
 

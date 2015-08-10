@@ -2,36 +2,6 @@
 
 namespace nx {
 
-http::http()
-: base_type(),
-parsed_(false)
-{}
-
-http::http(int fh)
-: base_type(fh),
-parsed_(false)
-{}
-
-http::http(http&& other)
-: base_type(std::forward<base_type>(other))
-{ *this = std::move(other); }
-
-http::~http()
-{}
-
-http&
-http::operator=(http&& other)
-{
-    base_type::operator=(std::forward<base_type>(other));
-    parsed_ = other.parsed_;
-    req_ = std::move(other.req_);
-    rep_ = std::move(other.rep_);
-    request_cb_ = std::move(other.request_cb_);
-    reply_cb_ = std::move(other.reply_cb_);
-
-    return *this;
-}
-
 bool
 http::request_parsed()
 {

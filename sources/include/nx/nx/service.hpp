@@ -1,24 +1,27 @@
 #ifndef __NX_SERVICE_H__
 #define __NX_SERVICE_H__
 
-#include <boost/asio.hpp>
-
 #include <thread>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
+#include <boost/asio.hpp>
+
 #include <nx/config.h>
-#include <nx/socket.hpp>
+#include <nx/socket_base.hpp>
 
 namespace nx {
 
-using namespace asio = boost::asio;
+namespace asio = boost::asio;
 
 class NX_API service
 {
 public:
     static service& get();
+
+    service();
+    ~service();
 
     void start();
     void stop();
@@ -26,12 +29,11 @@ public:
     asio::io_service& io_service();
     const asio::io_service& io_service() const;
 
-    void register(socket_ptr sptr);
-    void unregister(socket_ptr sptr);
+    void add(socket_ptr sptr);
+    void remove(socket_ptr sptr);
 
 private:
-    service();
-    ~service();
+
 
     service(const service&) = delete;
     void operator=(const service&) = delete;
