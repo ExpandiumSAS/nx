@@ -26,14 +26,6 @@ public:
     using base_type = tcp_base<ws>;
     using this_type = ws;
 
-    ws();
-    ws(int fh);
-    ws(const ws& other) = delete;
-    ws(ws&& other);
-    virtual ~ws();
-
-    ws& operator=(ws&& other);
-
     bool parse_frame(ws_frame& f);
     void process_frames();
     void process_request();
@@ -49,7 +41,7 @@ private:
     void server_handshake();
     void client_handshake();
 
-    bool parsed_;
+    bool parsed_ = false;;
     request req_;
     reply rep_;
 };

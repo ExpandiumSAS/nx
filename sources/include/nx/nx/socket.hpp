@@ -6,10 +6,10 @@
 #include <boost/asio.hpp>
 
 #include <nx/config.h>
-#include <nx/socket_base.hpp>
+#include <nx/object.hpp>
+#include <nx/endpoint.hpp>
 #include <nx/service.hpp>
 #include <nx/buffer.hpp>
-#include <nx/callbacks.hpp>
 
 namespace nx {
 
@@ -17,7 +17,6 @@ namespace asio = boost::asio;
 
 namespace tags {
 
-struct on_error_tag : callback_tag {};
 struct on_read_tag : callback_tag {};
 struct on_readable_tag : callback_tag {};
 struct on_writable_tag : callback_tag {};
@@ -25,7 +24,6 @@ struct on_drain_tag : callback_tag {};
 struct on_eof_tag : callback_tag {};
 struct on_close_tag : callback_tag {};
 
-const on_error_tag on_error = {};
 const on_read_tag on_read = {};
 const on_readable_tag on_readable = {};
 const on_writable_tag on_writable = {};
@@ -35,45 +33,27 @@ const on_close_tag on_close = {};
 
 } // namespace tags
 
-using error_code = boost::system::error_code;
-
-template <typename Socket>
-bool
-handle_error(Socket& s, const char* what, const error_code& e)
-{
-    if (!e || e == asio::error::operation_aborted) {
-        return false;
-    }
-
-    bool stop = false;
-
-    if (e == asio::error::eof) {
-        stop = true;
-    } else if (!s.handler(tags::on_error)(s, e)) {
-        // Unhandled error
-        std::cerr << "unhandled error: " << e.message() << std::endl;
-        stop = true;
-    }
-
-    if (stop) {
-        s.stop();
-    }
-
-    return true;
-}
-
 template <
     typename Derived,
     typename Socket,
     typename... Callbacks
 >
-class socket : public socket_base
+class socket
+: public object<
+    Derived,
+    callback<tags::on_read_tag, Derived&>,
+    callback<tags::on_readable_tag, Derived&>,
+    callback<tags::on_writable_tag, Derived&>,
+    callback<tags::on_drain_tag, Derived&>,
+    callback<tags::on_eof_tag, Derived&>,
+    callback<tags::on_close_tag, Derived&>,
+    Callbacks...
+>
 {
 public:
     using this_type = socket<Derived, Socket, Callbacks...>;
-    using socket_type = Socket;
-    using callbacks = nx::callbacks<
-        callback<tags::on_error_tag, Derived&, const error_code&>,
+    using base_type = object<
+        Derived,
         callback<tags::on_read_tag, Derived&>,
         callback<tags::on_readable_tag, Derived&>,
         callback<tags::on_writable_tag, Derived&>,
@@ -82,6 +62,7 @@ public:
         callback<tags::on_close_tag, Derived&>,
         Callbacks...
     >;
+    using socket_type = Socket;
 
     static constexpr std::size_t default_read_size = 10 * 1024 * 1024;
 
@@ -89,36 +70,33 @@ public:
     : socket_(service::get().io_service())
     {}
 
+    socket(socket_type other_socket)
+    : socket_(std::move(other_socket))
+    {}
+
     socket(const socket& other) = delete;
+    socket(socket&& other) = default;
     socket& operator=(const socket& other) = delete;
+    socket& operator=(socket&& other) = default;
 
     virtual ~socket()
     {}
 
-    template <
-        typename Tag,
-        typename Enabled = typename std::enable_if<
-            std::is_base_of<callback_tag, Tag>::value
-        >::type
-    >
-    auto&
-    handler(const Tag& t)
-    { return callbacks_.get(t); }
+    socket_type& sock()
+    { return socket_; }
 
-    template <typename Tag>
-    auto&
-    operator[](const Tag& t)
-    { return handler(t); }
+    const socket_type& sock() const
+    { return socket_; }
 
     void start()
     {
-        service::get().add(shared_from_this());
+        service::get().add(base_type::shared_from_this());
         read();
     }
 
     void stop()
     {
-        service::get().remove(shared_from_this());
+        service::get().remove(base_type::shared_from_this());
         close();
     }
 
@@ -166,8 +144,14 @@ protected:
     template <typename Iterator>
     this_type& push_write(Iterator b, Iterator e)
     {
-        wq_.emplace(b, e);
-        write();
+        auto self(base_type::shared_from_this());
+
+        io_service().post(
+            [this,self,b,e]() {
+                wq_.emplace(b, e);
+                write();
+            }
+        );
 
         return *this;
     }
@@ -175,8 +159,14 @@ protected:
     template <typename T>
     this_type& push_write(T&& t)
     {
-        wq_.emplace(std::move(t));
-        write();
+        auto self(base_type::shared_from_this());
+
+        io_service().post(
+            [this,self,t = std::move(t)]() {
+                wq_.emplace(std::move(t));
+                write();
+            }
+        );
 
         return *this;
     }
@@ -186,18 +176,21 @@ protected:
     Derived const& derived() const
     { return *static_cast<Derived const*>(this); }
 
-    socket_type& sock()
-    { return socket_; }
+    auto& io_service()
+    { return socket_.get_io_service(); }
 
-    const socket_type& sock() const
-    { return socket_; }
+    buffer& rbuf()
+    { return rbuf_; }
+
+    const buffer& rbuf() const
+    { return rbuf_; }
 
 private:
     void read()
     {
         buf_.resize(default_read_size);
 
-        auto self(shared_from_this());
+        auto self(base_type::shared_from_this());
 
         socket_.async_read_some(
             asio::buffer(buf_),
@@ -209,7 +202,7 @@ private:
                 rbuf_.insert(rbuf_.end(), buf_.begin(), buf_.end());
                 buf_.clear();
 
-                handler(tags::on_read)(derived());
+                base_type::handler(tags::on_read)(derived());
                 read();
             }
         );
@@ -217,18 +210,26 @@ private:
 
     void write()
     {
-        if (wq_.empty()) {
-            handler(tags::on_drain)(derived());
+        if (writing_) {
             return;
         }
 
-        auto self(shared_from_this());
+        if (wq_.empty()) {
+            base_type::handler(tags::on_drain)(derived());
+            return;
+        }
+
+        writing_ = true;
+
+        auto self(base_type::shared_from_this());
         buffer& b = wq_.front();
 
         asio::async_write(
             socket_,
             asio::buffer(b),
             [this,self](const error_code& ec, std::size_t count) {
+                writing_ = false;
+
                 if (handle_error(derived(), "write", ec)) {
                     return;
                 }
@@ -243,9 +244,9 @@ private:
     std::string desc() const;
 
     socket_type socket_;
-    callbacks callbacks_;
     buffer buf_;
     buffer rbuf_;
+    bool writing_ = false;
     buffer_queue wq_;
 };
 

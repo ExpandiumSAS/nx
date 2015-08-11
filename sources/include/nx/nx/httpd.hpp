@@ -16,7 +16,7 @@ class NX_API httpd
 public:
     route& operator()(const method& m);
 
-    const endpoint& operator()(const endpoint& ep);
+    endpoint operator()(const endpoint& ep);
 
     httpd& operator<<(json_collection_base& c);
 

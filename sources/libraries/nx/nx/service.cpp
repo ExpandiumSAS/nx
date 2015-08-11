@@ -32,19 +32,19 @@ service::io_service() const
 { return io_service_; }
 
 void
-service::add(socket_ptr sptr)
+service::add(object_ptr sptr)
 {
-    std::lock_guard<std::mutex> lock(sockets_mutex_);
+    std::lock_guard<std::mutex> lock(objects_mutex_);
 
-    sockets_.insert(sptr);
+    objects_.insert(sptr);
 }
 
 void
-service::remove(socket_ptr sptr)
+service::remove(object_ptr sptr)
 {
-    std::lock_guard<std::mutex> lock(sockets_mutex_);
+    std::lock_guard<std::mutex> lock(objects_mutex_);
 
-    sockets_.erase(sptr);
+    objects_.erase(sptr);
 }
 
 void

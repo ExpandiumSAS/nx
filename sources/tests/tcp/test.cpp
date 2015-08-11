@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
             std::reverse(str.begin(), str.end());
 
             t << str;
-            t.push_close();
+            //t.push_close();
         }
     );
 

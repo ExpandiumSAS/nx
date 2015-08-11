@@ -23,6 +23,14 @@ public:
     using base_type = tcp_base<http>;
     using this_type = http;
 
+    using base_type::tcp_base;
+
+    http() = default;
+    http(const http& other) = delete;
+    http(http&& other) = default;
+    http& operator=(const http& other) = delete;
+    http& operator=(http&& other) = default;
+
     void process_request();
     void process_reply();
     void send_request();
@@ -46,7 +54,7 @@ private:
 };
 
 template <typename OnRequest>
-const endpoint&
+endpoint
 serve(http& h, const endpoint& ep, OnRequest&& cb)
 {
     return

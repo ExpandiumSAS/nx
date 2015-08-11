@@ -16,34 +16,6 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
-ws::ws()
-: base_type(),
-parsed_(false)
-{}
-
-ws::ws(int fh)
-: base_type(fh),
-parsed_(false)
-{}
-
-ws::ws(ws&& other)
-: base_type(std::forward<base_type>(other))
-{ *this = std::move(other); }
-
-ws::~ws()
-{}
-
-ws&
-ws::operator=(ws&& other)
-{
-    base_type::operator=(std::forward<base_type>(other));
-    parsed_ = other.parsed_;
-    req_ = std::move(other.req_);
-    rep_ = std::move(other.rep_);
-
-    return *this;
-}
-
 void
 ws::finish(int code)
 {}
@@ -264,7 +236,7 @@ ws::send_request()
     bn::encode_b64(buffer.begin(), buffer.end(), std::back_inserter(key));
 
     req_
-        << header("Host", local().str())
+        << header("Host", local_str())
         << upgrade_websocket
         << connection_upgrade
         << header{ Sec_WebSocket_Key, key }

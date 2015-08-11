@@ -14,7 +14,7 @@ httpd::operator()(const method& m)
     return r.back();
 }
 
-const endpoint&
+endpoint
 httpd::operator()(const endpoint& ep)
 {
     return
