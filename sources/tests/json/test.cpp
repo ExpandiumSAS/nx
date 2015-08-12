@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
     nx::cond_var cvs[deadline_count];
 
     for (std::size_t i = 0; i < deadline_count; i++) {
-        deadlines[i](10.0) = [&](nx::timer& t, int events) {
+        deadlines[i](10) = [&](nx::timer& t) {
             t.stop();
             cvs[i].notify();
         };
@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
 
     add_json_format<test::person>(test::person_fmt);
 
-    auto ep = endpoint("127.0.0.1");
+    auto ep = make_endpoint("127.0.0.1");
 
     test::person p{ 1234, "John Doe", 42 };
 

@@ -100,6 +100,7 @@ connect(
             }
 
             cb(s);
+            s.start();
         }
     );
 
@@ -113,7 +114,7 @@ connect(
     Connected&& cb
 )
 {
-    auto p = new_socket<Socket>();
+    auto p = new_object<Socket>();
     auto& s = *p;
 
     return connect(s, to, std::move(cb));
@@ -150,7 +151,7 @@ serve(
                 return;
             }
 
-            auto cs_ptr = new_socket<Socket>(std::move(s.sock()));
+            auto cs_ptr = new_object<Socket>(std::move(s.sock()));
             auto& cs = *cs_ptr;
 
             cs[tags::on_read] = std::move(read_cb);
@@ -162,17 +163,17 @@ serve(
     return a.local_endpoint();
 }
 
-template <typename Socket, typename Accepted>
+template <typename Socket, typename Accepted, typename Read>
 endpoint
 serve(
     const endpoint& from,
-    Accepted&& accept_cb
+    Accepted&& accept_cb,
+    Read&& read_cb
 )
 {
-    auto p = new_socket<Socket>();
-    auto& s = *p;
+    auto p = new_object<Socket>();
 
-    return serve(s, from, std::move(accept_cb));
+    return serve(*p, from, std::move(accept_cb), std::move(read_cb));
 }
 
 } // namespace nx

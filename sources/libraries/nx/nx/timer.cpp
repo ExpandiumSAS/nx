@@ -9,27 +9,43 @@ timer::timer()
 
 timer&
 timer::operator()(const timestamp& after)
-{ t_.expires_from_now(after); }
+{
+    t_.expires_from_now(after);
 
+    return *this;
+}
+
+timer&
+timer::operator()(std::size_t seconds)
+{ return (*this)(std::chrono::seconds(seconds)); }
+
+void
 timer::start()
 {
-    auto self(shared_from_this());
-
     t_.async_wait(
-        [this,self](const error_code& ec) {
-            if ()
+        [this](const error_code& ec) {
+            if (handle_error(*this, "timer wait", ec)) {
+                return;
+            }
+
+            cb_(*this);
         }
     );
 }
 
+void
 timer::stop()
-{}
+{
+    error_code ec;
+
+    t_.cancel(ec);
+    handle_error(*this, "timer cancel", ec);
+}
 
 timer&
 timer::operator=(timer_cb cb)
 {
     cb_ = cb;
-    start();
 
     return *this;
 }

@@ -14,14 +14,14 @@ BOOST_AUTO_TEST_CASE(http_server)
     nx::timer deadline;
     nx::cond_var cv;
 
-    deadline(5.0) = [&](nx::timer& t, int events) {
+    deadline(5) = [&](nx::timer& t) {
         t.stop();
         cv.notify();
     };
 
     deadline.start();
 
-    auto ep = endpoint("127.0.0.1");
+    auto ep = make_endpoint("127.0.0.1");
     const char* hello_world = "Hello, world!";
 
     httpd hd;

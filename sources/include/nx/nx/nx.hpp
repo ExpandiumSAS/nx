@@ -1,5 +1,6 @@
 // No header guard
 #include <nx/cond_var.hpp>
+#include <nx/timer.hpp>
 #include <nx/tcp.hpp>
 #include <nx/http.hpp>
 #include <nx/httpc.hpp>

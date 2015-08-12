@@ -13,7 +13,7 @@ using endpoint = asio::ip::tcp::endpoint;
 
 inline
 endpoint
-make_endpoint(const std::string& address, uint16_t port)
+make_endpoint(const std::string& address, uint16_t port = 0)
 {
     return
         endpoint(

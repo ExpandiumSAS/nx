@@ -74,7 +74,7 @@ template <typename OnReply>
 http&
 connect(const endpoint& ep, request req, OnReply&& cb)
 {
-    auto p = new_socket<http>();
+    auto p = new_object<http>();
     auto& h = *p;
 
     h

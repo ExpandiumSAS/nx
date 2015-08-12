@@ -23,6 +23,9 @@ work_(io_service_),
 t_()
 { start(); }
 
+service::~service()
+{ stop(); }
+
 asio::io_service&
 service::io_service()
 { return io_service_; }
@@ -70,5 +73,10 @@ service::stop()
     t_.join();
     io_service_.reset();
 }
+
+void
+stop()
+{ service::get().stop(); }
+
 
 } // namespace nx

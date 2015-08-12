@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     nx::timer deadline;
     nx::cond_var cv;
 
-    deadline(5.0) = [&](nx::timer& t, int events) {
+    deadline(5) = [&](nx::timer& t) {
         t.stop();
         cv.notify();
     };
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     std::atomic_bool got_msg{ false };
 
     auto endpoint = nx::serve<nx::tcp>(
-        nx::endpoint("127.0.0.1", 0),
+        nx::make_endpoint("127.0.0.1", 0),
         [&](nx::tcp& t) {
             got_new_connection = true;
         },
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
             std::reverse(str.begin(), str.end());
 
             t << str;
-            //t.push_close();
+            t.stop();
         }
     );
 
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         [&](nx::tcp& t) {
             connected = true;
 
-            t[on_eof] = [&](nx::tcp& t) {
+            t[on_close] = [&](nx::tcp& t) {
                 disconnected = true;
             };
 

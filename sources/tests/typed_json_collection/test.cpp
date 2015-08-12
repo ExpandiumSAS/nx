@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(httpd_typed_json_collection)
 {
     using namespace nx;
 
-    deadline(10.0) = [&](nx::timer& t, int events) {
+    deadline(10) = [&](nx::timer& t) {
         t.stop();
         cv.notify_all();
     };
@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(httpd_typed_json_collection)
     hd << coll;
 
     // Start server
-    auto sep = hd(endpoint("127.0.0.1"));
+    auto sep = hd(make_endpoint("127.0.0.1"));
 
     httpc hc;
 

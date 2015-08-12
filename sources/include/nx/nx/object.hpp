@@ -1,6 +1,7 @@
 #ifndef __NX_OBJECT_H__
 #define __NX_OBJECT_H__
 
+#include <iostream>
 #include <memory>
 
 #include <nx/config.h>
@@ -26,7 +27,6 @@ public:
         return self;
     }
 
-    virtual void start() = 0;
     virtual void stop() = 0;
 };
 

@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_CASE(timer)
 
     bool got_timer = false;
 
-    t(.25) = [&](nx::timer& t, int events) {
+    t(std::chrono::milliseconds(25)) = [&](nx::timer& t) {
         got_timer = true;
         t.stop();
         cv.notify();

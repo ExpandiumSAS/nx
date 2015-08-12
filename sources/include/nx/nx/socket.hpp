@@ -2,6 +2,8 @@
 #define __NX_SOCKET_H__
 
 #include <memory>
+#include <mutex>
+#include <atomic>
 
 #include <boost/asio.hpp>
 
@@ -18,17 +20,11 @@ namespace asio = boost::asio;
 namespace tags {
 
 struct on_read_tag : callback_tag {};
-struct on_readable_tag : callback_tag {};
-struct on_writable_tag : callback_tag {};
 struct on_drain_tag : callback_tag {};
-struct on_eof_tag : callback_tag {};
 struct on_close_tag : callback_tag {};
 
 const on_read_tag on_read = {};
-const on_readable_tag on_readable = {};
-const on_writable_tag on_writable = {};
 const on_drain_tag on_drain = {};
-const on_eof_tag on_eof = {};
 const on_close_tag on_close = {};
 
 } // namespace tags
@@ -42,10 +38,7 @@ class socket
 : public object<
     Derived,
     callback<tags::on_read_tag, Derived&>,
-    callback<tags::on_readable_tag, Derived&>,
-    callback<tags::on_writable_tag, Derived&>,
     callback<tags::on_drain_tag, Derived&>,
-    callback<tags::on_eof_tag, Derived&>,
     callback<tags::on_close_tag, Derived&>,
     Callbacks...
 >
@@ -55,10 +48,7 @@ public:
     using base_type = object<
         Derived,
         callback<tags::on_read_tag, Derived&>,
-        callback<tags::on_readable_tag, Derived&>,
-        callback<tags::on_writable_tag, Derived&>,
         callback<tags::on_drain_tag, Derived&>,
-        callback<tags::on_eof_tag, Derived&>,
         callback<tags::on_close_tag, Derived&>,
         Callbacks...
     >;
@@ -88,15 +78,12 @@ public:
     const socket_type& sock() const
     { return socket_; }
 
-    void start()
-    {
-        service::get().add(base_type::shared_from_this());
-        read();
-    }
+    virtual void start()
+    { read(); }
 
-    void stop()
+    virtual void stop()
     {
-        service::get().remove(base_type::shared_from_this());
+        stop_ = true;
         close();
     }
 
@@ -144,14 +131,8 @@ protected:
     template <typename Iterator>
     this_type& push_write(Iterator b, Iterator e)
     {
-        auto self(base_type::shared_from_this());
-
-        io_service().post(
-            [this,self,b,e]() {
-                wq_.emplace(b, e);
-                write();
-            }
-        );
+        with_queue([&](auto& q) { q.emplace(b, e); });
+        write();
 
         return *this;
     }
@@ -159,14 +140,13 @@ protected:
     template <typename T>
     this_type& push_write(T&& t)
     {
-        auto self(base_type::shared_from_this());
-
-        io_service().post(
-            [this,self,t = std::move(t)]() {
-                wq_.emplace(std::move(t));
-                write();
+        with_queue(
+            [this,t = std::move(t)](auto& q) {
+                q.emplace(std::move(t));
             }
         );
+
+        write();
 
         return *this;
     }
@@ -185,21 +165,52 @@ protected:
     const buffer& rbuf() const
     { return rbuf_; }
 
+    void close()
+    {
+        std::lock_guard<std::mutex> lock(wqm_);
+
+        if (!writing_ && socket_.is_open()) {
+            std::cout << "closing" << std::endl;
+            error_code ec;
+
+            socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+            socket_.close();
+            base_type::handler(tags::on_close)(derived());
+        }
+    }
+
 private:
+    template <typename Callback>
+    auto with_queue(Callback cb)
+    { return with(wq_, wqm_, cb); }
+
+    template <typename Object, typename Callback>
+    auto with(Object& o, std::mutex& m, Callback cb)
+    {
+        std::lock_guard<std::mutex> lock(m);
+
+        return cb(o);
+    }
+
     void read()
     {
-        buf_.resize(default_read_size);
+        if (stop_) {
+            return;
+        }
 
-        auto self(base_type::shared_from_this());
+        buf_.resize(default_read_size);
 
         socket_.async_read_some(
             asio::buffer(buf_),
-            [this,self](const error_code& ec, std::size_t count) {
+            [this](const error_code& ec, std::size_t count) {
+                std::cout << "READH: " << count << std::endl;
+
                 if (handle_error(derived(), "read", ec)) {
+                    std::cout << "READH E: " << ec.message() << std::endl;
                     return;
                 }
 
-                rbuf_.insert(rbuf_.end(), buf_.begin(), buf_.end());
+                rbuf_.insert(rbuf_.end(), buf_.begin(), buf_.begin() + count);
                 buf_.clear();
 
                 base_type::handler(tags::on_read)(derived());
@@ -210,50 +221,56 @@ private:
 
     void write()
     {
+        std::lock_guard<std::mutex> lock(wqm_);
+
         if (writing_) {
             return;
         }
 
         if (wq_.empty()) {
-            base_type::handler(tags::on_drain)(derived());
+            io_service().post(
+                [this]() {
+                    base_type::handler(tags::on_drain)(derived());
+                }
+            );
+
             return;
         }
 
         writing_ = true;
-
-        auto self(base_type::shared_from_this());
         buffer& b = wq_.front();
+
+        std::cout << "writing: " << b << std::endl;
 
         asio::async_write(
             socket_,
             asio::buffer(b),
-            [this,self](const error_code& ec, std::size_t count) {
+            [this](const error_code& ec, std::size_t count) {
                 writing_ = false;
 
                 if (handle_error(derived(), "write", ec)) {
                     return;
                 }
 
-                wq_.pop();
-                write();
+                with_queue([](auto& q) { q.pop(); });
+
+                if (stop_) {
+                    close();
+                } else {
+                    write();
+                }
             }
         );
     }
 
-    void close();
-    std::string desc() const;
-
     socket_type socket_;
     buffer buf_;
     buffer rbuf_;
-    bool writing_ = false;
+    std::atomic_bool writing_ = { false };
+    std::atomic_bool stop_ = { false };
     buffer_queue wq_;
+    std::mutex wqm_;
 };
-
-template <typename Derived, typename... Args>
-std::shared_ptr<Derived>
-new_socket(Args&&... args)
-{ return std::make_shared<Derived>(std::forward<Args>(args)...); }
 
 } // namespace nx
 

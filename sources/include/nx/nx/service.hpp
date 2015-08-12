@@ -46,6 +46,20 @@ private:
     std::mutex objects_mutex_;
 };
 
+template <typename Derived, typename... Args>
+std::shared_ptr<Derived>
+new_object(Args&&... args)
+{
+    auto ptr = std::make_shared<Derived>(std::forward<Args>(args)...);
+
+    service::get().add(ptr);
+
+    return ptr;
+}
+
+NX_API
+void stop();
+
 } // namespace nx
 
 #endif // __NX_SERVICE_H__

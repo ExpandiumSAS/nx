@@ -3,7 +3,7 @@
 
 #include <functional>
 
-#include <boost/asio.hpp>
+#include <boost/asio/system_timer.hpp>
 
 #include <nx/config.h>
 #include <nx/object.hpp>
@@ -12,9 +12,9 @@ namespace nx {
 
 namespace asio = boost::asio;
 
-using timestamp = asio::deadline_timer::duration_type;
+using timestamp = asio::system_timer::duration;
 
-class NX_API timer : public object;
+class NX_API timer : public object<timer>
 {
 public:
     using timer_cb = std::function<
@@ -29,6 +29,7 @@ public:
     timer& operator=(timer&& other) = default;
 
     timer& operator()(const timestamp& after);
+    timer& operator()(std::size_t seconds);
 
     void start();
     void stop();
@@ -36,9 +37,11 @@ public:
     timer& operator=(timer_cb cb);
 
 private:
-    asio::deadline_timer t_;
+    asio::system_timer t_;
     timer_cb cb_;
 };
+
+
 
 } // nx
 
