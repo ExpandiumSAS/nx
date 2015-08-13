@@ -170,7 +170,8 @@ protected:
         std::lock_guard<std::mutex> lock(wqm_);
 
         if (!writing_ && socket_.is_open()) {
-            std::cout << "closing" << std::endl;
+            closed_ = true;
+
             error_code ec;
 
             socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
@@ -194,7 +195,7 @@ private:
 
     void read()
     {
-        if (stop_) {
+        if (stop_ || closed_) {
             return;
         }
 
@@ -203,18 +204,25 @@ private:
         socket_.async_read_some(
             asio::buffer(buf_),
             [this](const error_code& ec, std::size_t count) {
-                std::cout << "READH: " << count << std::endl;
-
                 if (handle_error(derived(), "read", ec)) {
-                    std::cout << "READH E: " << ec.message() << std::endl;
                     return;
                 }
 
-                rbuf_.insert(rbuf_.end(), buf_.begin(), buf_.begin() + count);
-                buf_.clear();
+                if (count > 0) {
+                    rbuf_.insert(
+                        rbuf_.end(),
+                        buf_.begin(), buf_.begin() + count
+                    );
 
-                base_type::handler(tags::on_read)(derived());
-                read();
+                    buf_.clear();
+                    base_type::handler(tags::on_read)(derived());
+                }
+
+                if (stop_) {
+                    close();
+                } else {
+                    read();
+                }
             }
         );
     }
@@ -223,7 +231,7 @@ private:
     {
         std::lock_guard<std::mutex> lock(wqm_);
 
-        if (writing_) {
+        if (writing_ || closed_) {
             return;
         }
 
@@ -239,8 +247,6 @@ private:
 
         writing_ = true;
         buffer& b = wq_.front();
-
-        std::cout << "writing: " << b << std::endl;
 
         asio::async_write(
             socket_,
@@ -268,6 +274,7 @@ private:
     buffer rbuf_;
     std::atomic_bool writing_ = { false };
     std::atomic_bool stop_ = { false };
+    std::atomic_bool closed_ = { false };
     buffer_queue wq_;
     std::mutex wqm_;
 };

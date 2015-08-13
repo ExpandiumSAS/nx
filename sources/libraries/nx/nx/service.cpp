@@ -58,7 +58,47 @@ service::start()
         return;
     }
 
-    t_ = std::thread([this]() { io_service_.run(); });
+    t_ = std::thread(
+        [this]() {
+            io_service_.run();
+            io_service_.reset();
+
+            {
+                std::lock_guard<std::mutex> lock(objects_mutex_);
+
+                for (auto& o : objects_) {
+                    o->stop();
+                }
+            }
+
+            std::size_t count = 0;
+            const std::size_t max_count = 1000;
+            error_code ec;
+
+            while (io_service_.poll(ec) != 0) {
+                if (ec) {
+                    std::cout
+                        << "service poll error: "
+                        << ec.message()
+                        << std::endl;
+                }
+
+                if (++count == max_count) {
+                    std::cout
+                        << "WHOA THERE ! "
+                        << "there are still active objects after "
+                        << max_count << " polls"
+                        << std::endl;
+                }
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(objects_mutex_);
+
+                objects_.clear();
+            }
+        }
+    );
 }
 
 void

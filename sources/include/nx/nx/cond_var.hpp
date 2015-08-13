@@ -11,7 +11,12 @@ namespace nx {
 class NX_API cond_var
 {
 public:
-    cond_var(std::size_t count = 1);
+    explicit cond_var(std::size_t count = 1);
+
+    cond_var(const cond_var& other) = delete;
+    cond_var(cond_var&& other) = default;
+    cond_var& operator=(const cond_var& other) = delete;
+    cond_var& operator=(cond_var&& other) = default;
 
     void notify();
     void notify_all();

@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
     nx::cond_var cvs[deadline_count];
 
     for (std::size_t i = 0; i < deadline_count; i++) {
-        deadlines[i](10) = [&](nx::timer& t) {
+        deadlines[i](10) = [&cvs,i](nx::timer& t) {
             t.stop();
             cvs[i].notify();
         };
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
     BOOST_CHECK_MESSAGE(got_get_request, "httpd got GET request");
     BOOST_CHECK_MESSAGE(got_put_request, "httpd got PUT request");
     BOOST_CHECK_MESSAGE(got_get_reply, "httpc got GET reply");
-    BOOST_CHECK_MESSAGE(got_put_reply, "httpc got GET reply");
+    BOOST_CHECK_MESSAGE(got_put_reply, "httpc got PUT reply");
     BOOST_CHECK_MESSAGE(get_reply_ok, "httpc got correct GET reply");
     BOOST_CHECK_MESSAGE(put_reply_ok, "httpc got correct PUT reply");
 }

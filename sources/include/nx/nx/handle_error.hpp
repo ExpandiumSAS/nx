@@ -27,9 +27,17 @@ handle_error(Object& o, const char* what, const error_code& e)
         return false;
     }
 
-    if (!o.handler(tags::on_error)(o, e)) {
+    bool stop = false;
+
+    if (e == asio::error::eof) {
+        stop = true;
+    } else if (!o.handler(tags::on_error)(o, e)) {
         // Unhandled error
         std::cerr << "unhandled error: " << e.message() << std::endl;
+        stop = true;
+    }
+
+    if (stop) {
         o.stop();
     }
 

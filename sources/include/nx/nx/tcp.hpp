@@ -121,28 +121,14 @@ connect(
 }
 
 template <typename Socket, typename Accepted, typename Read>
-endpoint
-serve(
-    Socket& s,
-    const endpoint& from,
-    Accepted&& accept_cb,
-    Read&& read_cb
-)
+void
+accept(Socket& s, Accepted accept_cb, Read read_cb)
 {
-    auto& a = s.make_acceptor();
-
-    a.open(from.protocol());
-    a.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-    a.bind(from);
-    a.listen();
+    auto& a = s.acceptor();
 
     a.async_accept(
         s.sock(),
-        [
-            &s,
-            accept_cb = std::move(accept_cb),
-            read_cb = std::move(read_cb)
-        ](const error_code& ec) {
+        [&s,accept_cb,read_cb](const error_code& ec) {
             if (!s.acceptor().is_open()) {
                 return;
             }
@@ -154,11 +140,32 @@ serve(
             auto cs_ptr = new_object<Socket>(std::move(s.sock()));
             auto& cs = *cs_ptr;
 
-            cs[tags::on_read] = std::move(read_cb);
+            cs[tags::on_read] = read_cb;
             cs.start();
             accept_cb(cs);
+
+            accept(s, accept_cb, read_cb);
         }
     );
+}
+
+template <typename Socket, typename Accepted, typename Read>
+endpoint
+serve(
+    Socket& s,
+    const endpoint& from,
+    Accepted accept_cb,
+    Read read_cb
+)
+{
+    auto& a = s.make_acceptor();
+
+    a.open(from.protocol());
+    a.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    a.bind(from);
+    a.listen();
+
+    accept(s, accept_cb, read_cb);
 
     return a.local_endpoint();
 }

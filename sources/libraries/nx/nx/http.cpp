@@ -49,7 +49,7 @@ http::process_request()
     }
 
     *this << rep_.content();
-    //push_close();
+    close();
 }
 
 void
@@ -68,7 +68,7 @@ http::process_reply()
 
     // All data arrived, call upper handler
     reply_cb_(rep_, rbuf());
-    //push_close();
+    close();
 }
 
 void

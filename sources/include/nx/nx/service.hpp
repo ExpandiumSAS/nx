@@ -52,7 +52,7 @@ new_object(Args&&... args)
 {
     auto ptr = std::make_shared<Derived>(std::forward<Args>(args)...);
 
-    service::get().add(ptr);
+    service::get().add(ptr->ptr());
 
     return ptr;
 }
