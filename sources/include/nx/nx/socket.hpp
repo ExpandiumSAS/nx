@@ -177,6 +177,7 @@ protected:
             socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
             socket_.close();
             base_type::handler(tags::on_close)(derived());
+            base_type::dispose();
         }
     }
 
@@ -236,11 +237,9 @@ private:
         }
 
         if (wq_.empty()) {
-            io_service().post(
-                [this]() {
-                    base_type::handler(tags::on_drain)(derived());
-                }
-            );
+            async() << [this]() {
+                base_type::handler(tags::on_drain)(derived());
+            };
 
             return;
         }

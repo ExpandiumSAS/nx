@@ -1,6 +1,7 @@
 #include <memory>
 
 #include <nx/service.hpp>
+#include <nx/handle_error.hpp>
 
 namespace nx {
 
@@ -48,6 +49,18 @@ service::remove(object_ptr sptr)
     std::lock_guard<std::mutex> lock(objects_mutex_);
 
     objects_.erase(sptr);
+}
+
+service&
+service::operator<<(void_cb&& cb)
+{
+    io_service_.post(
+        [cb = std::move(cb)]() {
+            cb();
+        }
+    );
+
+    return *this;
 }
 
 void
@@ -115,8 +128,20 @@ service::stop()
 }
 
 void
+add_object(object_ptr ptr)
+{ service::get().add(ptr); }
+
+void
+remove_object(object_ptr ptr)
+{ service::get().remove(ptr); }
+
+void
 stop()
 { service::get().stop(); }
+
+service&
+async()
+{ return service::get(); }
 
 
 } // namespace nx

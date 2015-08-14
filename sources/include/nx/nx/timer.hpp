@@ -41,7 +41,17 @@ private:
     timer_cb cb_;
 };
 
+class NX_API after
+{
+public:
+    after(const timestamp& after);
+    after(std::size_t seconds);
 
+    void operator<<(void_cb&& cb);
+
+private:
+    timestamp timeout_;
+};
 
 } // nx
 

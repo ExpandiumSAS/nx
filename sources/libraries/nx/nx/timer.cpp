@@ -50,4 +50,24 @@ timer::operator=(timer_cb cb)
     return *this;
 }
 
+after::after(const timestamp& after)
+: timeout_(after)
+{}
+
+after::after(std::size_t seconds)
+: after(std::chrono::seconds(seconds))
+{}
+
+void
+after::operator<<(void_cb&& cb)
+{
+    auto ptr = new_object<timer>();
+    auto& t = *ptr;
+
+    t(timeout_) = [cb = std::move(cb), ptr](timer& t) {
+        ptr->dispose();
+        cb();
+    };
+}
+
 } // nx
