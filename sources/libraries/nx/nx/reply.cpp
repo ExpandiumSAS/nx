@@ -8,7 +8,8 @@ namespace nx {
 
 reply::reply()
 : status_(OK),
-content_length_(0)
+content_length_(0),
+postponed_(false)
 {}
 
 reply::reply(reply&& other)
@@ -24,6 +25,8 @@ reply::operator=(reply&& other)
     content_length_ = other.content_length_;
     headers_ = std::move(other.headers_);
     data_.str(std::move(other.data_.str()));
+    postponed_ = other.postponed_;
+    done_cb_ = std::move(other.done_cb_);
 
     minor_version_ = other.minor_version_;
     raw_status_ = other.raw_status_;
@@ -129,6 +132,26 @@ reply::content() const
 
     return oss.str();
 }
+
+void
+reply::postpone()
+{ postponed_ = true; }
+
+bool
+reply::postponed()
+{ return postponed_; }
+
+void
+reply::done()
+{
+    if (done_cb_) {
+        done_cb_();
+    }
+}
+
+void_cb&
+reply::on_done()
+{ return done_cb_; }
 
 bool
 reply::operator==(const http_status& s) const

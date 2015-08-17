@@ -35,6 +35,8 @@ public:
     void process_reply();
     void send_request();
 
+
+
     using base_type::operator<<;
 
     http& operator<<(request_cb cb);

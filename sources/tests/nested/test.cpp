@@ -58,6 +58,8 @@ BOOST_AUTO_TEST_CASE(nested)
     hd(GET) / "hello1" = [&](const request& req, buffer& data, reply& rep) {
         got_request = true;
 
+        rep.postpone();
+
         /////////////// send a HTTP GET to hd2 /////////////////
         httpc hc2;
         hc2(GET, sep2) / "hello2" = [&](const reply& rep2, buffer& data2) {
@@ -70,8 +72,7 @@ BOOST_AUTO_TEST_CASE(nested)
                 << data2 << hello_world
             ;
 
-            deadline.stop();
-            cv.notify();
+            rep.done();
         };
     };
 
@@ -83,7 +84,7 @@ BOOST_AUTO_TEST_CASE(nested)
     hc(GET, sep) / "hello1" = [&](const reply& rep, buffer& data) {
         got_reply = true;
 
-        reply_ok = rep && data == string(hello_world) + string(hello_world2);
+        reply_ok = rep && data == string(hello_world2) + string(hello_world);
 
         deadline.stop();
         cv.notify();
@@ -91,14 +92,6 @@ BOOST_AUTO_TEST_CASE(nested)
 
     cv.wait();
     nx::stop();
-
-    cout << "got_request:" << got_request << endl;
-    cout << "got_reply:"<< got_reply << endl;
-    cout << "reply_ok :"<< reply_ok << endl;
-
-    cout << "got_request2:" << got_request2 << endl;
-    cout << "got_reply2:"<< got_reply2 << endl;
-    cout << "reply_ok2 :"<< reply_ok2 << endl;
 
     BOOST_CHECK_MESSAGE(got_request, "httpd did not get the request");
     BOOST_CHECK_MESSAGE(got_reply, "httpc did not get the reply");

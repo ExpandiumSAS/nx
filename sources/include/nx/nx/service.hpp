@@ -11,12 +11,11 @@
 
 #include <nx/config.h>
 #include <nx/object_base.hpp>
+#include <nx/handlers.hpp>
 
 namespace nx {
 
 namespace asio = boost::asio;
-
-using void_cb = std::function<void()>;
 
 class NX_API service
 {

@@ -13,6 +13,7 @@
 #include <nx/headers.hpp>
 #include <nx/http_status.hpp>
 #include <nx/json.hpp>
+#include <nx/handlers.hpp>
 
 namespace nx {
 
@@ -40,6 +41,11 @@ public:
     std::ostringstream& data();
     std::string content() const;
 
+    void postpone();
+    bool postponed();
+
+    void done();
+
     bool operator==(const http_status& s) const;
     bool operator!=(const http_status& s) const;
 
@@ -55,6 +61,11 @@ public:
         return *this;
     }
 
+protected:
+    friend class http;
+
+    void_cb& on_done();
+
 private:
     using raw_headers_ptr = std::unique_ptr<phr_header[]>;
     static const std::size_t max_headers = 128;
@@ -64,6 +75,8 @@ private:
     http_status status_;
     std::size_t content_length_;
     std::ostringstream data_;
+    bool postponed_;
+    void_cb done_cb_;
 
     int minor_version_;
     int raw_status_;

@@ -48,8 +48,14 @@ http::process_request()
         rep_ << BadRequest(e);
     }
 
-    *this << rep_.content();
-    close();
+    rep_.on_done() = [this]() {
+        *this << rep_.content();
+        close();
+    };
+
+    if (!rep_.postponed()) {
+        rep_.done();
+    }
 }
 
 void
