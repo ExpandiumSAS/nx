@@ -68,6 +68,7 @@ after::operator<<(void_cb&& cb)
         ptr->dispose();
         cb();
     };
+    t.start();
 }
 
 } // nx
