@@ -31,6 +31,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         nx::make_endpoint("127.0.0.1", 0),
         [&](nx::tcp& t) {
             got_new_connection = true;
+            std::cout << "GNC" << std::endl;
         },
         [&](nx::tcp& t) {
             std::string str;
@@ -41,6 +42,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
             std::reverse(str.begin(), str.end());
 
             t << str;
+            std::cout << "STOP" << std::endl;
             t.stop();
         }
     );
@@ -54,9 +56,11 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         endpoint,
         [&](nx::tcp& t) {
             connected = true;
+            std::cout << "CONN" << std::endl;
 
             t[on_close] = [&](nx::tcp& t) {
                 disconnected = true;
+                std::cout << "DISCO" << std::endl;
             };
 
             t << msg;
@@ -65,6 +69,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
 
     c[on_read] = [&](nx::tcp& t) {
         got_reply = true;
+        std::cout << "GREP" << std::endl;
 
         std::string str;
         t >> str;

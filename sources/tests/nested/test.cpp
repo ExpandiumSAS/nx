@@ -37,6 +37,7 @@ BOOST_AUTO_TEST_CASE(nested)
 
     hd2(GET) / "hello2" = [&](const request& req, buffer& data, reply& rep) {
         got_request2 = true;
+        std::cout << "1" << std::endl;
         rep
             << text_plain
             << hello_world2
@@ -57,6 +58,7 @@ BOOST_AUTO_TEST_CASE(nested)
     httpd hd;
     hd(GET) / "hello1" = [&](const request& req, buffer& data, reply& rep) {
         got_request = true;
+        std::cout << "2" << std::endl;
 
         rep.postpone();
 
@@ -64,6 +66,7 @@ BOOST_AUTO_TEST_CASE(nested)
         httpc hc2;
         hc2(GET, sep2) / "hello2" = [&](const reply& rep2, buffer& data2) {
             got_reply2 = true;
+            std::cout << "3" << std::endl;
 
             reply_ok2 = rep2 && data2 == hello_world2;
 
@@ -83,6 +86,7 @@ BOOST_AUTO_TEST_CASE(nested)
     httpc hc;
     hc(GET, sep) / "hello1" = [&](const reply& rep, buffer& data) {
         got_reply = true;
+        std::cout << "4" << std::endl;
 
         reply_ok = rep && data == string(hello_world2) + string(hello_world);
 
@@ -91,7 +95,9 @@ BOOST_AUTO_TEST_CASE(nested)
     };
 
     cv.wait();
+    std::cout << "5" << std::endl;
     nx::stop();
+    std::cout << "6" << std::endl;
 
     BOOST_CHECK_MESSAGE(got_request, "httpd did not get the request");
     BOOST_CHECK_MESSAGE(got_reply, "httpc did not get the reply");

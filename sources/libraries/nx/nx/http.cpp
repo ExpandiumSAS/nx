@@ -50,7 +50,7 @@ http::process_request()
 
     rep_.on_done() = [this]() {
         *this << rep_.content();
-        close();
+        close_after_write();
     };
 
     if (!rep_.postponed()) {

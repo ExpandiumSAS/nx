@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <mutex>
-#include <atomic>
 
 #include <boost/asio.hpp>
 
@@ -79,13 +78,10 @@ public:
     { return socket_; }
 
     virtual void start()
-    { read(); }
+    { async() << [this]() { read(); }; }
 
     virtual void stop()
-    {
-        stop_ = true;
-        close();
-    }
+    { close_after_write(); }
 
     this_type&
     operator<<(const char* s)
@@ -131,7 +127,7 @@ protected:
     template <typename Iterator>
     this_type& push_write(Iterator b, Iterator e)
     {
-        with_queue([&](auto& q) { q.emplace(b, e); });
+        locked([&]() { wq_.emplace(b, e); });
         write();
 
         return *this;
@@ -140,9 +136,9 @@ protected:
     template <typename T>
     this_type& push_write(T&& t)
     {
-        with_queue(
-            [this,t = std::move(t)](auto& q) {
-                q.emplace(std::move(t));
+        locked(
+            [this,t = std::move(t)]() {
+                wq_.emplace(std::move(t));
             }
         );
 
@@ -165,17 +161,27 @@ protected:
     const buffer& rbuf() const
     { return rbuf_; }
 
+    void close_after_write()
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        stop_ = true;
+
+        if (!closed_ && !writing_) {
+            async() << [this]() { close(); };
+        }
+    }
+
     void close()
     {
-        std::lock_guard<std::mutex> lock(wqm_);
+        std::lock_guard<std::mutex> lock(m_);
 
-        if (!writing_ && socket_.is_open()) {
-            closed_ = true;
-
+        if (!closed_ && socket_.is_open()) {
             error_code ec;
 
             socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
             socket_.close();
+            closed_ = true;
             base_type::handler(tags::on_close)(derived());
             base_type::dispose();
         }
@@ -183,19 +189,17 @@ protected:
 
 private:
     template <typename Callback>
-    auto with_queue(Callback cb)
-    { return with(wq_, wqm_, cb); }
-
-    template <typename Object, typename Callback>
-    auto with(Object& o, std::mutex& m, Callback cb)
+    auto locked(Callback cb)
     {
-        std::lock_guard<std::mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m_);
 
-        return cb(o);
+        return cb();
     }
 
     void read()
     {
+        std::lock_guard<std::mutex> lock(m_);
+
         if (stop_ || closed_) {
             return;
         }
@@ -219,20 +223,16 @@ private:
                     base_type::handler(tags::on_read)(derived());
                 }
 
-                if (stop_) {
-                    close();
-                } else {
-                    read();
-                }
+                async() << [this]() { read(); };
             }
         );
     }
 
     void write()
     {
-        std::lock_guard<std::mutex> lock(wqm_);
+        std::lock_guard<std::mutex> lock(m_);
 
-        if (writing_ || closed_) {
+        if (writing_ || stop_ || closed_) {
             return;
         }
 
@@ -253,17 +253,18 @@ private:
             [this](const error_code& ec, std::size_t count) {
                 writing_ = false;
 
+                if (stop_) {
+                    stop();
+                    return;
+                }
+
                 if (handle_error(derived(), "write", ec)) {
                     return;
                 }
 
-                with_queue([](auto& q) { q.pop(); });
+                locked([&]() { wq_.pop(); });
 
-                if (stop_) {
-                    close();
-                } else {
-                    write();
-                }
+                async() << [this](){ write(); };
             }
         );
     }
@@ -271,11 +272,11 @@ private:
     socket_type socket_;
     buffer buf_;
     buffer rbuf_;
-    std::atomic_bool writing_ = { false };
-    std::atomic_bool stop_ = { false };
-    std::atomic_bool closed_ = { false };
+    bool stop_ = false;
+    bool writing_ = false;
+    bool closed_ = false;
     buffer_queue wq_;
-    std::mutex wqm_;
+    std::mutex m_;
 };
 
 } // namespace nx
