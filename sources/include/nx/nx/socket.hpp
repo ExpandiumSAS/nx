@@ -78,7 +78,7 @@ public:
     { return socket_; }
 
     virtual void start()
-    { async() << [this]() { read(); }; }
+    { base_type::postpone() << [this]() { read(); }; }
 
     virtual void stop()
     { close_after_write(); }
@@ -168,7 +168,7 @@ protected:
         stop_ = true;
 
         if (!closed_ && !writing_) {
-            async() << [this]() { close(); };
+            base_type::postpone() << [this]() { close(); };
         }
     }
 
@@ -223,7 +223,7 @@ private:
                     base_type::handler(tags::on_read)(derived());
                 }
 
-                async() << [this]() { read(); };
+                base_type::postpone() << [this]() { read(); };
             }
         );
     }
@@ -237,7 +237,7 @@ private:
         }
 
         if (wq_.empty()) {
-            async() << [this]() {
+            base_type::postpone() << [this]() {
                 base_type::handler(tags::on_drain)(derived());
             };
 
@@ -264,7 +264,7 @@ private:
 
                 locked([&]() { wq_.pop(); });
 
-                async() << [this](){ write(); };
+                base_type::postpone() << [this](){ write(); };
             }
         );
     }

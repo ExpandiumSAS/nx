@@ -39,6 +39,8 @@ http::process_request()
             req_ << attributes(body, '&');
         }
 
+        rep_ << connection_close;
+
         // All data arrived, call upper handler
         request_cb_(req_, rbuf(), rep_);
     } catch (const http_status& s) {

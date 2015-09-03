@@ -46,6 +46,7 @@ const header text_plain = { Content_Type, "text/plain" };
 const header application_json = { Content_Type, "application/json" };
 const header upgrade_websocket = { Upgrade, "websocket" };
 const header connection_upgrade = { Connection, Upgrade };
+const header connection_close = { Connection, "close" };
 
 } // namespace nx
 

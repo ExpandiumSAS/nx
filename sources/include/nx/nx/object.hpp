@@ -3,9 +3,26 @@
 
 #include <nx/object_base.hpp>
 #include <nx/handle_error.hpp>
+#include <nx/handlers.hpp>
 #include <nx/service.hpp>
 
 namespace nx {
+
+struct postponer
+{
+    postponer& operator<<(void_cb&& cb)
+    {
+        auto ptr = o.ptr();
+
+        async() << [ptr, cb = std::move(cb)]() {
+            cb();
+        };
+
+        return *this;
+    }
+
+    object_base& o;
+};
 
 template <
     typename Derived,
@@ -34,6 +51,9 @@ public:
             service::get().remove(self);
         };
     }
+
+    postponer postpone()
+    { return postponer{ *this }; }
 
     template <
         typename Tag,
