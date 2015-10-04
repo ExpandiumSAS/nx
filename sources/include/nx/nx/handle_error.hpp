@@ -1,6 +1,8 @@
 #ifndef __NX_HANDLE_ERROR_H__
 #define __NX_HANDLE_ERROR_H__
 
+#include <iostream>
+
 #include <boost/asio.hpp>
 
 #include <nx/callbacks.hpp>

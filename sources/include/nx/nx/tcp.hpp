@@ -24,7 +24,7 @@ public:
 
     using acceptor_type = asio::ip::tcp::acceptor;
 
-    using base_type::socket;
+    using base_type::base_type;
 
     tcp_base() = default;
     tcp_base(const tcp_base& other) = delete;
