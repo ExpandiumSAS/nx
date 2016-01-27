@@ -1,3 +1,5 @@
+#include <uuid.h>
+
 #include <iostream>
 #include <fstream>
 
@@ -9,20 +11,32 @@
 namespace nx {
 
 json_collection_base::json_collection_base(const std::string& path)
-: id_(0),
-path_(clean_path(path))
+: path_(clean_path(path))
 {}
 
 json_collection_base::~json_collection_base()
 {}
 
 json_collection_base::id_type
-json_collection_base::next_id()
-{ return make_next_id_(id_); }
+json_collection_base::make_id()
+{
+    static const char* const lut = "0123456789ABCDEF";
 
-json_collection_base::id_type
-json_collection_base::cur_id()
-{ return id_; }
+    uuid_t uuid;
+
+    uuid_generate(uuid);
+
+    id_type id;
+
+    id.reserve(2 * sizeof(uuid_t));
+
+    for (const auto& c : uuid) {
+        id.push_back(lut[c >> 4]);
+        id.push_back(lut[c & 15]);
+    }
+
+    return id;
+}
 
 const std::string&
 json_collection_base::path() const
@@ -151,10 +165,10 @@ json_collection::POST(const collection_tag& t)
             throw BadRequest("request body is empty");
         }
 
+        auto id = make_id();
+
         try {
             json item(data);
-
-            auto id = next_id();
 
             item.value()["id"] = id;
             c_.emplace(id, item.value());
@@ -166,7 +180,7 @@ json_collection::POST(const collection_tag& t)
                 << header{ location, join("/", path(), id) }
                 ;
         } catch (const std::exception& e) {
-            c_.erase(cur_id());
+            c_.erase(id);
 
             throw BadRequest("bad JSON data: ", e);
         }
@@ -186,7 +200,7 @@ route_cb
 json_collection::GET(const item_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
-        auto id = nx::to_num<id_type>(req.a("id"));
+        const auto& id = req.a("id");
         auto it = c_.find(id);
 
         if (it != c_.end()) {
@@ -201,7 +215,7 @@ route_cb
 json_collection::PUT(const item_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
-        auto id = nx::to_num<id_type>(req.a("id"));
+        const auto& id = req.a("id");
 
         if (data.empty()) {
             throw BadRequest("request body is empty");
@@ -234,7 +248,7 @@ route_cb
 json_collection::DELETE(const item_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
-        auto id = nx::to_num<id_type>(req.a("id"));
+        const auto& id = req.a("id");
 
         if (c_.find(id) != c_.end()) {
             handler(tags::on_item_removed)(id);
@@ -252,8 +266,6 @@ json_collection::put_collection(const jsonv::value& c)
     std::size_t error_count = 0;
     std::ostringstream oss;
 
-    id_ = 0;
-
     for (auto& v : c.as_array()) {
         auto it = v.find("id");
 
@@ -261,13 +273,12 @@ json_collection::put_collection(const jsonv::value& c)
             continue;
         }
 
-        std::size_t id;
+        id_type id;
 
         try {
-            id = it->second.as_integer();
+            id = it->second.as_string();
             c_[id] = v;
             handler(tags::on_item_added)(id);
-            id_ = id > id_ ? id : id_;
         } catch (const std::exception& e) {
             // Bad item
             c_.erase(id);

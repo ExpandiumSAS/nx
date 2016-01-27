@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
 
     auto ep = make_endpoint("127.0.0.1");
 
-    test::person p{ 1234, "John Doe", 42 };
+    test::person p{ "some id", "John Doe", 42 };
 
     httpd hd;
 
@@ -47,12 +47,12 @@ BOOST_AUTO_TEST_CASE(httpd_json)
     hd(PUT) / "persons" / ":id" = [&](const request& req, buffer& data, reply& rep) {
         got_put_request = true;
 
-        auto id = nx::to_num<std::size_t>(req.a("id"));
+        const auto& id = req.a("id");
         test::person tp;
 
         json(data) >> tp;
 
-        put_request_ok = id == 42 && tp.name == p.name && tp.age == p.age;
+        put_request_ok = id == "some id" && tp.name == p.name && tp.age == p.age;
     };
 
     auto sep = hd(ep);

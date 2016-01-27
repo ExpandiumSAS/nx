@@ -8,7 +8,7 @@
 namespace test {
 
 struct person {
-    std::size_t id;
+    std::string id;
     std::string name;
     std::size_t age;
 };
@@ -34,7 +34,7 @@ struct hash<test::person>
     using result_type = std::size_t;
 
     std::size_t operator()(const test::person& x) const
-    { return std::hash<std::size_t>()(x.id); }
+    { return std::hash<std::string>()(x.id); }
 };
 
 template <>
@@ -44,7 +44,7 @@ struct equal_to<test::person>
     using first_argument_type = test::person;
     using second_argument_type = test::person;
 
-    constexpr bool operator()(
+    bool operator()(
         const test::person& lhs,
         const test::person& rhs
     ) const

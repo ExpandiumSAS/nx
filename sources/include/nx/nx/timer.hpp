@@ -31,6 +31,7 @@ public:
     timer& operator()(const timestamp& after);
     timer& operator()(std::size_t seconds);
 
+    void repeat(bool flag);
     void start();
     void stop();
 
@@ -39,6 +40,7 @@ public:
 private:
     asio::system_timer t_;
     timer_cb cb_;
+    bool repeat_{ false };
 };
 
 class NX_API after

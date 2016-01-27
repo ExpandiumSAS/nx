@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(httpd_typed_json_collection)
 
     hc(POST, sep)
         / "persons"
-        << json(test::person{ 42, "Bart Simpson", 15 })
+        << json(test::person{ "42", "Bart Simpson", 15 })
         = [&](const reply& rep, buffer& data) {
             item_created = (rep == Created);
 
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(httpd_typed_json_collection)
                         json(data) >> p;
 
                         item_is_correct = (
-                            p.id == 1
+                            p.id != "42"
                             &&
                             p.name == "Bart Simpson"
                             &&

@@ -31,21 +31,10 @@ const on_item_changed_tag on_item_changed = {};
 struct item_tag {};
 struct collection_tag {};
 
-template <typename T>
-struct make_next_id
-{};
-
-template <>
-struct make_next_id<std::size_t>
-{
-    std::size_t operator()(std::size_t& id) const
-    { return ++id; }
-};
-
 class NX_API json_collection_base
 {
 public:
-    using id_type = std::size_t;
+    using id_type = std::string;
     using callbacks = nx::callbacks<
         callback<tags::on_item_added_tag, id_type>,
         callback<tags::on_item_removed_tag, id_type>,
@@ -83,16 +72,10 @@ public:
     virtual route_cb DELETE(const item_tag& t) = 0;
 
 protected:
-    using make_next_id_type = make_next_id<id_type>;
-
-    id_type next_id();
-    id_type cur_id();
+    id_type make_id();
 
     jsonv::value load() const;
     bool save(const jsonv::value& coll) const;
-
-    id_type id_;
-    make_next_id_type make_next_id_;
 
 private:
     std::string path_;
@@ -192,7 +175,7 @@ public:
     route_cb POST(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
-            auto id = next_id();
+            auto id = make_id();
             value_type item;
 
             if (data.empty()) {
@@ -225,7 +208,7 @@ public:
     route_cb GET(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
-            auto id = nx::to_num<id_type>(req.a("id"));
+            const auto& id = req.a("id");
             auto it = c_.find(id);
 
             if (it != c_.end()) {
@@ -239,7 +222,7 @@ public:
     route_cb PUT(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
-            auto id = nx::to_num<id_type>(req.a("id"));
+            const auto& id = req.a("id");
 
             value_type item;
 
@@ -257,7 +240,7 @@ public:
     route_cb DELETE(const item_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
-            auto id = nx::to_num<id_type>(req.a("id"));
+            const auto& id = req.a("id");
 
             c_.erase(id);
         };

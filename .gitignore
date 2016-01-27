@@ -4,3 +4,10 @@ build
 CMakeLists.txt
 Makefile
 # CBUILD_GITIGNORE END
+# CBUILD_GITIGNORE BEGIN
+.cbuild
+build
+cmake
+CMakeLists.txt
+Makefile
+# CBUILD_GITIGNORE END

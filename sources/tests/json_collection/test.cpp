@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
     hc(POST, sep)
         / "persons"
         << jsonv::object({
-            { "id", 42 },
+            { "id", "42" },
             { "name", "Bart Simpson" },
             { "age", 15 }
         })
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(httpd_json_collection)
                         const auto& p = person.value();
 
                         item_is_correct = (
-                            p.at("id").as_integer() == 1
+                            p.at("id").as_string() != "42"
                             &&
                             p.at("name").as_string() == "Bart Simpson"
                             &&
