@@ -67,22 +67,49 @@ json_collection_base::load() const
 bool
 json_collection_base::save(const jsonv::value& coll) const
 {
+    bool ret = true;
+
     if (dir_.empty()) {
         // No save dir specified
         return true;
     }
 
     auto file = cxxu::cat_file(dir_, path_ + ".json");
+    auto backup = file + ".old";
 
-    if (!cxxu::mkfilepath(file)) {
-        cxxu::warning() << "failed to create " << file;
-        return false;
+    try {
+        cxxu::mkfilepath(file);
+
+        if (cxxu::file_exists(file)) {
+            cxxu::rename(file, backup);
+        }
+
+        std::ofstream ofs(file);
+
+        if (!ofs.is_open()) {
+            throw std::runtime_error("failed to open " + file);
+        }
+
+        ofs << coll << std::flush;
+
+        if (!ofs) {
+            throw std::runtime_error("failed to write " + file);
+        }
+    } catch (const std::exception& e) {
+        ret = false;
+
+        cxxu::rmfile(file);
+
+        if (cxxu::file_exists(backup)) {
+            cxxu::rename(backup, file);
+        }
     }
 
-    std::ofstream ofs(file);
-    ofs << coll;
+    if (cxxu::file_exists(backup)) {
+        cxxu::rmfile(backup);
+    }
 
-    return true;
+    return ret;
 }
 
 json_collection::json_collection(const std::string& path)
