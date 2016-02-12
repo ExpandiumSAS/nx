@@ -1,5 +1,6 @@
 #include <uuid.h>
 
+#include <ios>
 #include <iostream>
 #include <fstream>
 
@@ -54,10 +55,15 @@ json_collection_base::load() const
     if (!dir_.empty()) {
         auto file = cxxu::cat_file(dir_, path_ + ".json");
 
-        if (cxxu::file_exists(file)) {
-            std::ifstream ifs(file);
+        auto loaded = cxxu::read_file(
+            file,
+            [&coll](std::ifstream& ifs) {
+                coll = jsonv::parse(ifs);
+            }
+        );
 
-            coll = jsonv::parse(ifs);
+        if (!loaded) {
+            cxxu::warning() << "collection at " << path_ << " was not loaded";
         }
     }
 
@@ -67,49 +73,25 @@ json_collection_base::load() const
 bool
 json_collection_base::save(const jsonv::value& coll) const
 {
-    bool ret = true;
-
     if (dir_.empty()) {
         // No save dir specified
         return true;
     }
 
     auto file = cxxu::cat_file(dir_, path_ + ".json");
-    auto backup = file + ".old";
 
-    try {
-        cxxu::mkfilepath(file);
-
-        if (cxxu::file_exists(file)) {
-            cxxu::rename(file, backup);
+    auto saved = cxxu::write_file(
+        file,
+        [&coll](std::ofstream& ofs) {
+            ofs << coll;
         }
+    );
 
-        std::ofstream ofs(file);
-
-        if (!ofs.is_open()) {
-            throw std::runtime_error("failed to open " + file);
-        }
-
-        ofs << coll << std::flush;
-
-        if (!ofs) {
-            throw std::runtime_error("failed to write " + file);
-        }
-    } catch (const std::exception& e) {
-        ret = false;
-
-        cxxu::rmfile(file);
-
-        if (cxxu::file_exists(backup)) {
-            cxxu::rename(backup, file);
-        }
+    if (!saved) {
+        cxxu::warning() << "collection at " << path_ << " was not saved";
     }
 
-    if (cxxu::file_exists(backup)) {
-        cxxu::rmfile(backup);
-    }
-
-    return ret;
+    return saved;
 }
 
 json_collection::json_collection(const std::string& path)
