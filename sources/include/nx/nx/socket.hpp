@@ -22,6 +22,7 @@
 #include <nx/endpoint.hpp>
 #include <nx/service.hpp>
 #include <nx/buffer.hpp>
+#include <nx/file.hpp>
 
 namespace nx {
 
@@ -76,11 +77,11 @@ public:
 
     socket()
     : socket_(service::get().io_service())
-    { socket_.non_blocking(); }
+    {}
 
     socket(socket_type other_socket)
     : socket_(std::move(other_socket))
-    { socket_.non_blocking(); }
+    {}
 
     socket(const socket& other) = delete;
     socket(socket&& other) = default;
@@ -175,7 +176,6 @@ protected:
             [this,t = std::move(t)]() {
                 wcq_.emplace(write_cmd::buffer);
                 bq_.emplace(std::move(t));
-                }
             }
         );
     }
@@ -330,7 +330,10 @@ private:
         f.fd = open(f.path.c_str(), O_RDONLY);
 
         if (f.fd == -1) {
-            auto ec = boost::system::make_error_code(errno);
+            auto ec = error_code(
+                errno,
+                boost::system::system_category()
+            );
 
             if (handle_error(derived(), "sendfile open", ec)) {
                 return;

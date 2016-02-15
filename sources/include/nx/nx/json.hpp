@@ -87,7 +87,7 @@ public:
     json(buffer& b);
 
     template <typename T>
-    json(const T& t)
+    explicit json(const T& t)
     { v_ = json_types::get().to_json(t); }
 
     template <typename T>
