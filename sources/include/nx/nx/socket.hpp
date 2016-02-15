@@ -1,8 +1,19 @@
 #ifndef __NX_SOCKET_H__
 #define __NX_SOCKET_H__
 
+#include <fcntl.h>
+
+#if defined(LINUX)
+#include <sys/sendfile.h>
+#elif defined(DARWIN)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#endif
+
 #include <memory>
 #include <mutex>
+#include <queue>
 
 #include <boost/asio.hpp>
 
@@ -27,6 +38,14 @@ const on_drain_tag on_drain = {};
 const on_close_tag on_close = {};
 
 } // namespace tags
+
+enum class write_cmd
+{
+    buffer,
+    file
+};
+
+using write_cmd_queue = std::queue<write_cmd>;
 
 template <
     typename Derived,
@@ -57,11 +76,11 @@ public:
 
     socket()
     : socket_(service::get().io_service())
-    {}
+    { socket_.non_blocking(); }
 
     socket(socket_type other_socket)
     : socket_(std::move(other_socket))
-    {}
+    { socket_.non_blocking(); }
 
     socket(const socket& other) = delete;
     socket(socket&& other) = default;
@@ -123,25 +142,48 @@ public:
         return *this;
     }
 
+    this_type&
+    operator<<(const nx::file& f)
+    { return push_write(f); }
+
 protected:
+    this_type& push_write(const file& f)
+    {
+        return start_write(
+            [&]() {
+                wcq_.emplace(write_cmd::file);
+                fq_.emplace(f);
+            }
+        );
+    }
+
     template <typename Iterator>
     this_type& push_write(Iterator b, Iterator e)
     {
-        locked([&]() { wq_.emplace(b, e); });
-        write();
-
-        return *this;
+        return start_write(
+            [&]() {
+                wcq_.emplace(write_cmd::buffer);
+                bq_.emplace(b, e);
+            }
+        );
     }
 
     template <typename T>
     this_type& push_write(T&& t)
     {
-        locked(
+        return start_write(
             [this,t = std::move(t)]() {
-                wq_.emplace(std::move(t));
+                wcq_.emplace(write_cmd::buffer);
+                bq_.emplace(std::move(t));
+                }
             }
         );
+    }
 
+    template <typename Callable>
+    this_type& start_write(Callable cb)
+    {
+        locked(cb);
         write();
 
         return *this;
@@ -236,7 +278,7 @@ private:
             return;
         }
 
-        if (wq_.empty()) {
+        if (wcq_.empty()) {
             base_type::postpone() << [this]() {
                 base_type::handler(tags::on_drain)(derived());
             };
@@ -245,7 +287,20 @@ private:
         }
 
         writing_ = true;
-        buffer& b = wq_.front();
+
+        switch (wcq_.front()) {
+            case write_cmd::buffer:
+            write_buffer();
+            break;
+            case write_cmd::file:
+            write_file();
+            break;
+        }
+    }
+
+    void write_buffer()
+    {
+        buffer& b = bq_.front();
 
         asio::async_write(
             socket_,
@@ -262,11 +317,25 @@ private:
                     return;
                 }
 
-                locked([&]() { wq_.pop(); });
+                locked([&]() { wcq_.pop(); bq_.pop(); });
 
                 base_type::postpone() << [this](){ write(); };
             }
         );
+    }
+
+    void write_file()
+    {
+        file& f = fq_.front();
+        f.fd = open(f.path.c_str(), O_RDONLY);
+
+        if (f.fd == -1) {
+            auto ec = boost::system::make_error_code(errno);
+
+            if (handle_error(derived(), "sendfile open", ec)) {
+                return;
+            }
+        }
     }
 
     socket_type socket_;
@@ -275,7 +344,9 @@ private:
     bool stop_ = false;
     bool writing_ = false;
     bool closed_ = false;
-    buffer_queue wq_;
+    write_cmd_queue wcq_;
+    buffer_queue bq_;
+    file_queue fq_;
     std::mutex m_;
 };
 
