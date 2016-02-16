@@ -2,17 +2,12 @@
 #define __NX_FILE_H__
 
 #include <fcntl.h>
-
-#if defined(LINUX)
-#include <sys/sendfile.h>
-#elif defined(DARWIN)
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#endif
 
 #include <string>
 #include <queue>
+
+#include <boost/asio.hpp>
 
 #include <cxxu/utils.hpp>
 
@@ -20,6 +15,8 @@
 #include <nx/error_code.hpp>
 
 namespace nx {
+
+namespace asio = boost::asio;
 
 /// @file
 ///
@@ -30,6 +27,10 @@ struct file
 };
 
 using file_queue = std::queue<file>;
+
+NX_API
+ssize_t
+send_file(int out_fd, int in_fd, off_t* offset, size_t count);
 
 namespace detail {
 
@@ -46,11 +47,13 @@ void send_file_write(Socket& s, file_state fs, Callable cb)
 {
     if (fs.offset == fs.total) {
         // We're done
+        ::close(fs.fd);
         cb(error_code(), fs.total);
         return;
     }
 
-    auto result = sendfile(
+    // Call platform specific implementation
+    auto result = send_file(
         s.sock().native(),
         fs.fd,
         &fs.offset,
@@ -70,6 +73,7 @@ void send_file_write(Socket& s, file_state fs, Callable cb)
                 }
             );
         } else {
+            ::close(fs.fd);
             cb(ec, fs.offset);
         }
     } else {
