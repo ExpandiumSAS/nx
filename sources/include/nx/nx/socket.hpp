@@ -316,21 +316,28 @@ private:
 
     void write_file()
     {
-        file& f = fq_.front();
-        f.fd = ::open(f.path.c_str(), O_RDONLY);
+        const file& f = fq_.front();
 
-        if (f.fd == -1) {
-            auto ec = error_code(
-                errno,
-                boost::system::system_category()
-            );
+        send_file(
+            *this,
+            f,
+            [this](const error_code& ec, std::size_t count) {
+                writing_ = false;
 
-            if (handle_error(derived(), "sendfile open", ec)) {
-                return;
+                if (stop_) {
+                    stop();
+                    return;
+                }
+
+                if (handle_error(derived(), "send_file", ec)) {
+                    return;
+                }
+
+                locked([&]() { wcq_.pop(); fq_.pop(); });
+
+                base_type::postpone() << [this](){ write(); };
             }
-        } else {
-
-        }
+        );
     }
 
     socket_type socket_;

@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 
 #include <nx/callbacks.hpp>
+#include <nx/error_code.hpp>
 
 namespace nx {
 
@@ -18,8 +19,6 @@ const on_error_tag on_error = {};
 } // namespace tags
 
 namespace asio = boost::asio;
-
-using error_code = boost::system::error_code;
 
 template <typename Object>
 bool
