@@ -15,6 +15,7 @@
 #include <nx/attributes.hpp>
 #include <nx/uri.hpp>
 #include <nx/json.hpp>
+#include <nx/file.hpp>
 
 namespace nx {
 
@@ -61,6 +62,7 @@ public:
     request& operator<<(const attributes& a);
     request& operator<<(const json& js);
     request& operator<<(const jsonv::value& v);
+    request& operator<<(const file& f);
 
     template <typename T>
     request& operator<<(const T& v)
