@@ -2,54 +2,30 @@
 #include <cctype>
 #include <algorithm>
 
-#include <nx/request.hpp>
-#include <nx/http_status.hpp>
+#include <nx/http_msg.hpp>
 #include <nx/utils.hpp>
 
 namespace nx {
 
-request::request()
+http_msg::http_msg()
 : content_length_(0)
 {}
 
-request::request(const nx::method& m)
-: method_(m.str),
-content_length_(0)
-{}
-
-request::request(const std::string& method)
-: method_(method),
-content_length_(0)
-{}
-
-request::request(const std::string& method, const std::string& path)
-: method_(method),
-path_(path),
-content_length_(0)
-{}
-
-request::request(request&& other)
+http_msg::http_msg(http_msg&& other)
 { *this = std::move(other); }
 
-request::~request()
+http_msg::~http_msg()
 {}
 
-request&
-request::operator=(request&& other)
+http_msg&
+http_msg::operator=(http_msg&& other)
 {
     raw_headers_ptr_ = std::move(other.raw_headers_ptr_);
     headers_ = std::move(other.headers_);
-    method_ = std::move(other.method_);
-    path_ = std::move(other.path_);
     content_length_ = other.content_length_;
-    attrs_ = std::move(other.attrs_);
     data_.str(std::move(other.data_.str()));
 
-    raw_method_= other.raw_method_;
-    raw_method_len_= other.raw_method_len_;
-    raw_path_= other.raw_path_;
-    raw_path_len_= other.raw_path_len_;
-    minor_version_= other.minor_version_;
+    minor_version_ = other.minor_version_;
     num_headers_= other.num_headers_;
     prev_buf_len_= other.prev_buf_len_;
 
@@ -57,7 +33,7 @@ request::operator=(request&& other)
 }
 
 bool
-request::parse(buffer& b)
+http_msg::parse(buffer& b)
 {
     bool parsed = false;
     num_headers_ = max_headers;
@@ -66,7 +42,7 @@ request::parse(buffer& b)
         raw_headers_ptr_ = std::make_unique<phr_header[]>(max_headers);
     }
 
-    int ret = phr_parse_request(
+    int ret = phr_parse_http_msg(
         b.data(), b.size(),
         &raw_method_, &raw_method_len_,
         &raw_path_, &raw_path_len_,
@@ -111,43 +87,43 @@ request::parse(buffer& b)
 }
 
 const std::string&
-request::method() const
+http_msg::method() const
 { return method_; }
 
 const std::string&
-request::path() const
+http_msg::path() const
 { return path_; }
 
 std::size_t
-request::content_length() const
+http_msg::content_length() const
 { return content_length_; }
 
 std::string&
-request::h(const std::string& name)
+http_msg::h(const std::string& name)
 { return headers_[name]; }
 
 const std::string&
-request::h(const std::string& name) const
+http_msg::h(const std::string& name) const
 { return headers_[name]; }
 
 bool
-request::has(const header& h) const
+http_msg::has(const header& h) const
 { return headers_.has(h.name) && headers_[h.name] == h.value; }
 
 bool
-request::has(const std::string& name) const
+http_msg::has(const std::string& name) const
 { return headers_.has(name); }
 
 std::string&
-request::a(const std::string& name)
+http_msg::a(const std::string& name)
 { return attrs_[name]; }
 
 const std::string&
-request::a(const std::string& name) const
+http_msg::a(const std::string& name) const
 { return attrs_[name]; }
 
 std::string
-request::content() const
+http_msg::content() const
 {
     std::ostringstream oss;
 
@@ -172,15 +148,15 @@ request::content() const
 }
 
 bool
-request::operator==(const nx::method& m) const
+http_msg::operator==(const nx::method& m) const
 { return method_ == m.str; }
 
 bool
-request::operator!=(const nx::method& m) const
+http_msg::operator!=(const nx::method& m) const
 { return !(*this == m); }
 
-request&
-request::operator/(const std::string& path)
+http_msg&
+http_msg::operator/(const std::string& path)
 {
     path_ += '/';
     path_ += path;
@@ -188,48 +164,48 @@ request::operator/(const std::string& path)
     return *this;
 }
 
-request&
-request::operator<<(const nx::method& m)
+http_msg&
+http_msg::operator<<(const nx::method& m)
 {
     method_ = m.str;
 
     return *this;
 }
 
-request&
-request::operator<<(const header& h)
+http_msg&
+http_msg::operator<<(const header& h)
 {
     headers_ << h;
 
     return *this;
 }
 
-request&
-request::operator<<(const headers& h)
+http_msg&
+http_msg::operator<<(const headers& h)
 {
     headers_ << h;
 
     return *this;
 }
 
-request&
-request::operator<<(const attribute& a)
+http_msg&
+http_msg::operator<<(const attribute& a)
 {
     attrs_ << a;
 
     return *this;
 }
 
-request&
-request::operator<<(const attributes& a)
+http_msg&
+http_msg::operator<<(const attributes& a)
 {
     attrs_ << a;
 
     return *this;
 }
 
-request&
-request::operator<<(const json& js)
+http_msg&
+http_msg::operator<<(const json& js)
 {
     headers_ << application_json;
     data_ << js;
@@ -237,8 +213,8 @@ request::operator<<(const json& js)
     return *this;
 }
 
-request&
-request::operator<<(const jsonv::value& v)
+http_msg&
+http_msg::operator<<(const jsonv::value& v)
 {
     headers_ << application_json;
 
@@ -250,7 +226,7 @@ request::operator<<(const jsonv::value& v)
 }
 
 bool
-request::is_form() const
+http_msg::is_form() const
 {
     return
         *this == POST

@@ -5,6 +5,7 @@
 #include <ostream>
 #include <sstream>
 #include <memory>
+#include <type_traits>
 
 #include <nx/picohttpparser.h>
 
@@ -16,6 +17,7 @@
 #include <nx/uri.hpp>
 #include <nx/json.hpp>
 #include <nx/file.hpp>
+#include <nx/socket_base.hpp>
 
 namespace nx {
 
@@ -46,9 +48,6 @@ public:
 
     std::string& a(const std::string& name);
     const std::string& a(const std::string& name) const;
-
-    std::ostringstream& data();
-    std::string content() const;
 
     bool operator==(const nx::method& m) const;
     bool operator!=(const nx::method& m) const;
@@ -96,13 +95,15 @@ private:
     std::size_t prev_buf_len_ = 0;
 };
 
-inline
-std::ostream&
-operator<<(std::ostream& os, const request& r)
-{
-    os << r.content();
-    return os;
-}
+template <
+    typename Socket,
+    typename = std::enable_if_t<
+        std::is_base_of<socket_base, Socket>::value
+    >
+>
+Socket&
+operator<<(Socket& s, )
+
 
 } // namespace nx
 

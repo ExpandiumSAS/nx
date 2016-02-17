@@ -8,6 +8,7 @@
 #include <boost/asio.hpp>
 
 #include <nx/config.h>
+#include <nx/socket_base.hpp>
 #include <nx/object.hpp>
 #include <nx/endpoint.hpp>
 #include <nx/service.hpp>
@@ -44,7 +45,7 @@ template <
     typename... Callbacks
 >
 class socket
-: public object<
+: public socket_base, object<
     Derived,
     callback<tags::on_read_tag, Derived&>,
     callback<tags::on_drain_tag, Derived&>,
@@ -136,6 +137,13 @@ public:
     this_type&
     operator<<(const nx::file& f)
     { return push_write(f); }
+
+    this_type&
+    operator<<(const nx::data& data)
+    {
+
+        return *this;
+    }
 
 protected:
     this_type& push_write(const file& f)

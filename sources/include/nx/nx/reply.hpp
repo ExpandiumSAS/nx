@@ -38,7 +38,6 @@ public:
     std::string& h(const std::string& name);
     const std::string& h(const std::string& name) const;
 
-    std::ostringstream& data();
     std::string content() const;
 
     void postpone();

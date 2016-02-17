@@ -108,10 +108,6 @@ const std::string&
 reply::h(const std::string& name) const
 { return headers_[name]; }
 
-std::ostringstream&
-reply::data()
-{ return data_; }
-
 std::string
 reply::content() const
 {
