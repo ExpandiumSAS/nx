@@ -83,7 +83,7 @@ void
 http::send_request()
 {
     req_ << header("Host", local_str());
-    *this << req_.content();
+    // TOFIX: *this << req_.content();
 }
 
 http&

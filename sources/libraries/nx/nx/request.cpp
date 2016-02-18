@@ -9,23 +9,23 @@
 namespace nx {
 
 request::request()
-: content_length_(0)
+: http_msg()
 {}
 
 request::request(const nx::method& m)
-: method_(m.str),
-content_length_(0)
+: http_msg(),
+method_(m.str)
 {}
 
 request::request(const std::string& method)
-: method_(method),
-content_length_(0)
+: http_msg(),
+method_(method)
 {}
 
 request::request(const std::string& method, const std::string& path)
-: method_(method),
-path_(path),
-content_length_(0)
+: http_msg(),
+method_(method),
+path_(path)
 {}
 
 request::request(request&& other)
@@ -37,21 +37,15 @@ request::~request()
 request&
 request::operator=(request&& other)
 {
-    raw_headers_ptr_ = std::move(other.raw_headers_ptr_);
-    headers_ = std::move(other.headers_);
+    http_msg::operator=(std::forward<request>(other));
     method_ = std::move(other.method_);
     path_ = std::move(other.path_);
-    content_length_ = other.content_length_;
     attrs_ = std::move(other.attrs_);
-    data_.str(std::move(other.data_.str()));
 
     raw_method_= other.raw_method_;
     raw_method_len_= other.raw_method_len_;
     raw_path_= other.raw_path_;
     raw_path_len_= other.raw_path_len_;
-    minor_version_= other.minor_version_;
-    num_headers_= other.num_headers_;
-    prev_buf_len_= other.prev_buf_len_;
 
     return *this;
 }
@@ -60,11 +54,8 @@ bool
 request::parse(buffer& b)
 {
     bool parsed = false;
-    num_headers_ = max_headers;
 
-    if (!raw_headers_ptr_) {
-        raw_headers_ptr_ = std::make_unique<phr_header[]>(max_headers);
-    }
+    pre_parse();
 
     int ret = phr_parse_request(
         b.data(), b.size(),
@@ -83,21 +74,8 @@ request::parse(buffer& b)
         path_ = std::move(u.path());
         attrs_ = std::move(u.a());
 
-        for (std::size_t i = 0; i < num_headers_; i++) {
-            auto& h = raw_headers_ptr_.get()[i];
+        post_parse();
 
-            std::string name(h.name, h.name_len);
-            std::string value(h.value, h.value_len);
-
-            headers_ << header(std::move(name), std::move(value));
-        }
-
-        // Grab common useful header values
-        if (headers_.has(nx::content_length)) {
-            content_length_ = to_num<std::size_t>(headers_[nx::content_length]);
-        }
-
-        raw_headers_ptr_.reset();
         b.erase(b.begin(), b.begin() + (std::size_t) ret);
     } else if (ret == -1) {
         throw BadRequest;
@@ -118,26 +96,6 @@ const std::string&
 request::path() const
 { return path_; }
 
-std::size_t
-request::content_length() const
-{ return content_length_; }
-
-std::string&
-request::h(const std::string& name)
-{ return headers_[name]; }
-
-const std::string&
-request::h(const std::string& name) const
-{ return headers_[name]; }
-
-bool
-request::has(const header& h) const
-{ return headers_.has(h.name) && headers_[h.name] == h.value; }
-
-bool
-request::has(const std::string& name) const
-{ return headers_.has(name); }
-
 std::string&
 request::a(const std::string& name)
 { return attrs_[name]; }
@@ -146,30 +104,30 @@ const std::string&
 request::a(const std::string& name) const
 { return attrs_[name]; }
 
-std::string
-request::content() const
-{
-    std::ostringstream oss;
+// std::string
+// request::content() const
+// {
+//     std::ostringstream oss;
 
-    auto body = data_.str();
-    auto hdrs = headers_;
+//     auto body = data_.str();
+//     auto hdrs = headers_;
 
-    if (method_ != GET.str) {
-        hdrs << header(nx::Content_Length, std::to_string(body.size()));
-    }
+//     if (method_ != GET.str) {
+//         hdrs << header(nx::Content_Length, std::to_string(body.size()));
+//     }
 
-    oss
-        << method_ << " " << clean_path(path_) << " HTTP/1.1\r\n"
-        << hdrs
-        << "\r\n"
-        ;
+//     oss
+//         << method_ << " " << clean_path(path_) << " HTTP/1.1\r\n"
+//         << hdrs
+//         << "\r\n"
+//         ;
 
-    if (method_ != GET.str) {
-        oss << body;
-    }
+//     if (method_ != GET.str) {
+//         oss << body;
+//     }
 
-    return oss.str();
-}
+//     return oss.str();
+// }
 
 bool
 request::operator==(const nx::method& m) const
@@ -197,22 +155,6 @@ request::operator<<(const nx::method& m)
 }
 
 request&
-request::operator<<(const header& h)
-{
-    headers_ << h;
-
-    return *this;
-}
-
-request&
-request::operator<<(const headers& h)
-{
-    headers_ << h;
-
-    return *this;
-}
-
-request&
 request::operator<<(const attribute& a)
 {
     attrs_ << a;
@@ -224,27 +166,6 @@ request&
 request::operator<<(const attributes& a)
 {
     attrs_ << a;
-
-    return *this;
-}
-
-request&
-request::operator<<(const json& js)
-{
-    headers_ << application_json;
-    data_ << js;
-
-    return *this;
-}
-
-request&
-request::operator<<(const jsonv::value& v)
-{
-    headers_ << application_json;
-
-    std::ostringstream oss;
-    oss << v;
-    data_ << oss.str();
 
     return *this;
 }

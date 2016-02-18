@@ -242,7 +242,7 @@ ws::send_request()
         << header{ Sec_WebSocket_Key, key }
         ;
 
-    *this << req_.content();
+    // TOFIX: *this << req_.content();
 }
 
 } // namespace nx

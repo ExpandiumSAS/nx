@@ -14,6 +14,7 @@
 #include <nx/service.hpp>
 #include <nx/buffer.hpp>
 #include <nx/file.hpp>
+#include <nx/data.hpp>
 
 namespace nx {
 
@@ -45,7 +46,7 @@ template <
     typename... Callbacks
 >
 class socket
-: public socket_base, object<
+: public socket_base, public object<
     Derived,
     callback<tags::on_read_tag, Derived&>,
     callback<tags::on_drain_tag, Derived&>,

@@ -19,7 +19,7 @@
 
 namespace nx {
 
-class NX_API http_msg
+class NX_API http_msg_base
 {
 public:
     http_msg();
@@ -29,9 +29,15 @@ public:
 
     http_msg& operator=(http_msg&& other);
 
-    bool parse(buffer& b);
+    void pre_parse();
+    void post_parse();
+
+    virtual bool parse(buffer& b) = 0;
 
     std::size_t content_length() const;
+
+    std::string header_data() const;
+    nx::data& data();
 
     std::string& h(const std::string& name);
     const std::string& h(const std::string& name) const;
