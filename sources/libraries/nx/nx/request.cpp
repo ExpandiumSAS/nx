@@ -88,6 +88,26 @@ request::parse(buffer& b)
     return parsed;
 }
 
+std::string
+request::header_data() const
+{
+    std::ostringstream oss;
+
+    auto hdrs = headers_;
+
+    if (method_ != GET.str) {
+        hdrs << header(nx::Content_Length, std::to_string(data_.size()));
+    }
+
+    oss
+        << method_ << " " << clean_path(path_) << " HTTP/1.1\r\n"
+        << hdrs
+        << "\r\n"
+        ;
+
+    return oss.str();
+}
+
 const std::string&
 request::method() const
 { return method_; }
@@ -103,31 +123,6 @@ request::a(const std::string& name)
 const std::string&
 request::a(const std::string& name) const
 { return attrs_[name]; }
-
-// std::string
-// request::content() const
-// {
-//     std::ostringstream oss;
-
-//     auto body = data_.str();
-//     auto hdrs = headers_;
-
-//     if (method_ != GET.str) {
-//         hdrs << header(nx::Content_Length, std::to_string(body.size()));
-//     }
-
-//     oss
-//         << method_ << " " << clean_path(path_) << " HTTP/1.1\r\n"
-//         << hdrs
-//         << "\r\n"
-//         ;
-
-//     if (method_ != GET.str) {
-//         oss << body;
-//     }
-
-//     return oss.str();
-// }
 
 bool
 request::operator==(const nx::method& m) const

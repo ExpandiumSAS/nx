@@ -9,10 +9,8 @@
 #include <nx/picohttpparser.h>
 
 #include <nx/config.h>
-#include <nx/buffer.hpp>
-#include <nx/headers.hpp>
+#include <nx/http_msg.hpp>
 #include <nx/http_status.hpp>
-#include <nx/json.hpp>
 #include <nx/handlers.hpp>
 
 namespace nx {
@@ -35,10 +33,7 @@ public:
 
     const http_status& code() const;
 
-    std::string& h(const std::string& name);
-    const std::string& h(const std::string& name) const;
-
-    std::string content() const;
+    std::string header_data() const;
 
     void postpone();
     bool postponed();

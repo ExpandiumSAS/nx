@@ -14,11 +14,10 @@
 #include <nx/methods.hpp>
 #include <nx/attributes.hpp>
 #include <nx/uri.hpp>
-#include <nx/socket_base.hpp>
 
 namespace nx {
 
-class NX_API request : public http_msg
+class NX_API request : public http_msg<request>
 {
 public:
     request();
@@ -32,6 +31,7 @@ public:
     request& operator=(request&& other);
 
     bool parse(buffer& b);
+    std::string header_data() const;
 
     const std::string& method() const;
     const std::string& path() const;
@@ -63,16 +63,6 @@ private:
     const char *raw_path_;
     std::size_t raw_path_len_;
 };
-
-// template <
-//     typename Socket,
-//     typename = std::enable_if_t<
-//         std::is_base_of<socket_base, Socket>::value
-//     >
-// >
-// Socket&
-// operator<<(Socket& s, )
-
 
 } // namespace nx
 

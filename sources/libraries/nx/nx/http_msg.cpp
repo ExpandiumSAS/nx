@@ -7,18 +7,18 @@
 
 namespace nx {
 
-http_msg::http_msg()
+http_msg_base::http_msg_base()
 : content_length_(0)
 {}
 
-http_msg::http_msg(http_msg&& other)
+http_msg_base::http_msg_base(http_msg_base&& other)
 { *this = std::move(other); }
 
-http_msg::~http_msg()
+http_msg_base::~http_msg_base()
 {}
 
-http_msg&
-http_msg::operator=(http_msg&& other)
+http_msg_base&
+http_msg_base::operator=(http_msg_base&& other)
 {
     raw_headers_ptr_ = std::move(other.raw_headers_ptr_);
     headers_ = std::move(other.headers_);
@@ -33,7 +33,7 @@ http_msg::operator=(http_msg&& other)
 }
 
 void
-http_msg::pre_parse()
+http_msg_base::pre_parse()
 {
     num_headers_ = max_headers;
 
@@ -43,7 +43,7 @@ http_msg::pre_parse()
 }
 
 void
-http_msg::post_parse()
+http_msg_base::post_parse()
 {
     for (std::size_t i = 0; i < num_headers_; i++) {
         auto& h = raw_headers_ptr_.get()[i];
@@ -63,43 +63,47 @@ http_msg::post_parse()
 }
 
 std::size_t
-http_msg::content_length() const
+http_msg_base::content_length() const
 { return content_length_; }
 
+const nx::data&
+http_msg_base::data() const
+{ return data_; }
+
 std::string&
-http_msg::h(const std::string& name)
+http_msg_base::h(const std::string& name)
 { return headers_[name]; }
 
 const std::string&
-http_msg::h(const std::string& name) const
+http_msg_base::h(const std::string& name) const
 { return headers_[name]; }
 
 bool
-http_msg::has(const header& h) const
+http_msg_base::has(const header& h) const
 { return headers_.has(h.name) && headers_[h.name] == h.value; }
 
 bool
-http_msg::has(const std::string& name) const
+http_msg_base::has(const std::string& name) const
 { return headers_.has(name); }
 
-http_msg&
-http_msg::operator<<(const header& h)
+http_msg_base&
+http_msg_base::operator<<(const header& h)
 {
     headers_ << h;
 
     return *this;
 }
 
-http_msg&
-http_msg::operator<<(const headers& h)
+http_msg_base&
+http_msg_base::operator<<(const headers& h)
 {
     headers_ << h;
 
     return *this;
 }
 
-http_msg&
-http_msg::operator<<(const json& js)
+http_msg_base&
+http_msg_base::operator<<(const json& js)
 {
     headers_ << application_json;
     data_ << js;
@@ -107,8 +111,8 @@ http_msg::operator<<(const json& js)
     return *this;
 }
 
-http_msg&
-http_msg::operator<<(const jsonv::value& v)
+http_msg_base&
+http_msg_base::operator<<(const jsonv::value& v)
 {
     headers_ << application_json;
 
