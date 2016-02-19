@@ -7,6 +7,7 @@
 
 #include <nx/config.h>
 #include <nx/file.hpp>
+#include <nx/socket_base.hpp>
 
 namespace nx {
 
@@ -24,6 +25,24 @@ public:
     std::size_t size() const;
 
     void clear();
+
+    template <typename Socket>
+    void operator()(Socket& s) const
+    {
+        auto sit = streams_.begin();
+        auto fit = files_.begin();
+
+        for (auto& i : items_) {
+            switch (i) {
+                case data_item::stream:
+                s << (*sit)->str(); ++sit;
+                break;
+                case data_item::file:
+                s << *fit; ++fit;
+                break;
+            }
+        }
+    }
 
     template <typename T>
     data& operator<<(const T& v)
@@ -57,6 +76,20 @@ private:
     streams streams_;
     files files_;
 };
+
+template <
+    typename Socket,
+    typename = std::enable_if_t<
+        std::is_base_of<socket_base, Socket>::value
+    >
+>
+Socket&
+operator<<(Socket& s, const data& d)
+{
+    d(s);
+
+    return s;
+}
 
 } // namespace nx
 

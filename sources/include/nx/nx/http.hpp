@@ -26,6 +26,8 @@ public:
     using base_type::tcp_base;
 
     http() = default;
+    http(request&& req, reply_cb&& cb);
+    http(reply&& rep, request_cb&& cb);
     http(const http& other) = delete;
     http(http&& other) = default;
     http& operator=(const http& other) = delete;
@@ -38,9 +40,7 @@ public:
     using base_type::operator<<;
 
     http& operator<<(request_cb cb);
-    http& operator<<(const request& req);
     http& operator<<(reply_cb cb);
-    http& operator<<(const reply& rep);
 
 private:
     bool request_parsed();
@@ -72,15 +72,10 @@ serve(http& h, const endpoint& ep, OnRequest&& cb)
 
 template <typename OnReply>
 http&
-connect(const endpoint& ep, request req, OnReply&& cb)
+connect(const endpoint& ep, request&& req, OnReply&& cb)
 {
-    auto p = new_object<http>();
+    auto p = new_object<http>(std::move(req), std::move(cb));
     auto& h = *p;
-
-    h
-        << std::move(req)
-        << std::move(cb)
-        ;
 
     h[tags::on_read] = [](http& t) {
         t.process_reply();

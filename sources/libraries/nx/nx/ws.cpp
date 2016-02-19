@@ -155,7 +155,7 @@ ws::process_request()
         rep_ << BadRequest(e);
     }
 
-    *this << rep_.content();
+    // TOFIX: *this << rep_.content();
 
     // From now on, process websocket frames
     (*this)[tags::on_read] = [](ws& w) { w.process_frames(); };

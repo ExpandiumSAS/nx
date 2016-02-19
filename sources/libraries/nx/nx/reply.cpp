@@ -128,7 +128,6 @@ reply::operator<<(const http_status& s)
     status_ = s;
 
     if (s.is_error()) {
-        data_.str(std::string());
         data_.clear();
         jsonv::value e = jsonv::object({{ "error", s.error }});
         *this << e;

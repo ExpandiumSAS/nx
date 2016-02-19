@@ -1,6 +1,7 @@
 #ifndef __NX_SOCKET_H__
 #define __NX_SOCKET_H__
 
+#include <string>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -138,13 +139,6 @@ public:
     this_type&
     operator<<(const nx::file& f)
     { return push_write(f); }
-
-    this_type&
-    operator<<(const nx::data& data)
-    {
-
-        return *this;
-    }
 
 protected:
     this_type& push_write(const file& f)

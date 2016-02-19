@@ -2,6 +2,16 @@
 
 namespace nx {
 
+http::http(request&& req, reply_cb&& cb)
+: req_(std::move(req)),
+reply_cb_(std::move(cb))
+{}
+
+http::http(reply&& rep, request_cb&& cb)
+: rep_(std::move(rep)),
+request_cb_(std::move(cb))
+{}
+
 bool
 http::request_parsed()
 {
@@ -64,6 +74,7 @@ void
 http::process_reply()
 {
     try {
+
         if (!reply_parsed() || rbuf().size() < rep_.content_length()) {
             // Wait until response is complete
             return;
@@ -83,7 +94,7 @@ void
 http::send_request()
 {
     req_ << header("Host", local_str());
-    // TOFIX: *this << req_.content();
+    *this << std::move(req_);
 }
 
 http&
@@ -95,25 +106,9 @@ http::operator<<(request_cb cb)
 }
 
 http&
-http::operator<<(request req)
-{
-    req_ = std::move(req);
-
-    return *this;
-}
-
-http&
 http::operator<<(reply_cb cb)
 {
     reply_cb_ = std::move(cb);
-
-    return *this;
-}
-
-http&
-http::operator<<(reply rep)
-{
-    rep_ = std::move(rep);
 
     return *this;
 }
