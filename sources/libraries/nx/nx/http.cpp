@@ -51,7 +51,7 @@ http::process_request()
     }
 
     rep_.on_done() = [this]() {
-        *this << rep_.content();
+        *this << rep_;
         close_after_write();
     };
 

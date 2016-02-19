@@ -23,6 +23,8 @@ class NX_API data
 public:
     std::size_t size() const;
 
+    void clear();
+
     template <typename T>
     data& operator<<(const T& v)
     {

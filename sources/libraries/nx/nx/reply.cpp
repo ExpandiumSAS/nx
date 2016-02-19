@@ -8,7 +8,6 @@ namespace nx {
 
 reply::reply()
 : status_(OK),
-content_length_(0),
 postponed_(false)
 {}
 
@@ -21,10 +20,9 @@ reply::~reply()
 reply&
 reply::operator=(reply&& other)
 {
+    http_msg::operator=(std::forward<reply>(other));
     status_ = std::move(other.status_);
-    content_length_ = other.content_length_;
-    headers_ = std::move(other.headers_);
-    data_.str(std::move(other.data_.str()));
+
     postponed_ = other.postponed_;
     done_cb_ = std::move(other.done_cb_);
 
@@ -32,7 +30,6 @@ reply::operator=(reply&& other)
     raw_status_ = other.raw_status_;
     raw_msg_ = other.raw_msg_;
     raw_msg_len_ = other.raw_msg_len_;
-    num_headers_ = other.num_headers_;
     prev_buf_len_ = other.prev_buf_len_;
 
     return *this;
@@ -45,11 +42,8 @@ bool
 reply::parse(buffer& b)
 {
     bool parsed = false;
-    num_headers_ = max_headers;
 
-    if (!raw_headers_ptr_) {
-        raw_headers_ptr_ = std::make_unique<phr_header[]>(max_headers);
-    }
+    pre_parse();
 
     int ret = phr_parse_response(
         b.data(), b.size(),
@@ -64,22 +58,7 @@ reply::parse(buffer& b)
         parsed = true;
         status_.code = raw_status_;
         status_.status.assign(raw_msg_, raw_msg_len_);
-
-        for (std::size_t i = 0; i < num_headers_; i++) {
-            auto& h = raw_headers_ptr_.get()[i];
-
-            std::string name(h.name, h.name_len);
-            std::string value(h.value, h.value_len);
-
-            headers_ << header(std::move(name), std::move(value));
-        }
-
-        // Grab common useful header values
-        if (headers_.has(nx::content_length)) {
-            content_length_ = to_num<std::size_t>(headers_[nx::content_length]);
-        }
-
-        raw_headers_ptr_.reset();
+        post_parse();
         b.erase(b.begin(), b.begin() + (std::size_t) ret);
     } else if (ret == -1) {
         throw BadResponse;
@@ -92,38 +71,24 @@ reply::parse(buffer& b)
     return parsed;
 }
 
-std::size_t
-reply::content_length() const
-{ return content_length_; }
-
 const http_status&
 reply::code() const
 { return status_; }
 
-std::string&
-reply::h(const std::string& name)
-{ return headers_[name]; }
-
-const std::string&
-reply::h(const std::string& name) const
-{ return headers_[name]; }
-
 std::string
-reply::content() const
+reply::header_data() const
 {
     std::ostringstream oss;
 
-    auto body = data_.str();
     auto hdrs = headers_;
 
-    hdrs << header(nx::Content_Length, std::to_string(body.size()));
+    hdrs << header(nx::Content_Length, std::to_string(data_.size()));
 
     oss
         << "HTTP/1.1 "
         << status_.code << " " << status_.status << "\r\n"
         << hdrs
         << "\r\n"
-        << body
         ;
 
     return oss.str();
@@ -168,27 +133,6 @@ reply::operator<<(const http_status& s)
         jsonv::value e = jsonv::object({{ "error", s.error }});
         *this << e;
     }
-
-    return *this;
-}
-
-reply&
-reply::operator<<(const header& h)
-{
-    headers_ << h;
-
-    return *this;
-}
-
-reply&
-reply::operator<<(const jsonv::value& v)
-{
-    headers_ << application_json;
-
-    std::ostringstream os;
-
-    os << v;
-    data_ << os.str();
 
     return *this;
 }

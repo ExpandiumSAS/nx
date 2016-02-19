@@ -8,6 +8,14 @@ std::size_t
 data::size() const
 { return size_; }
 
+void
+data::clear()
+{
+    items_.clear();
+    streams_.clear();
+    files_.clear();
+}
+
 data&
 data::operator<<(const file& f)
 {

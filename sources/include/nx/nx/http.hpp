@@ -38,9 +38,9 @@ public:
     using base_type::operator<<;
 
     http& operator<<(request_cb cb);
-    http& operator<<(request req);
+    http& operator<<(const request& req);
     http& operator<<(reply_cb cb);
-    http& operator<<(reply rep);
+    http& operator<<(const reply& rep);
 
 private:
     bool request_parsed();
