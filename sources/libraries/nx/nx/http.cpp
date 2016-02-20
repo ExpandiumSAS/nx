@@ -74,7 +74,6 @@ void
 http::process_reply()
 {
     try {
-
         if (!reply_parsed() || rbuf().size() < rep_.content_length()) {
             // Wait until response is complete
             return;

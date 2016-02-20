@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <atomic>
 
 #include <boost/asio.hpp>
 
@@ -94,7 +95,7 @@ public:
     { base_type::postpone() << [this]() { read(); }; }
 
     virtual void stop()
-    { close_after_write(); }
+    { close(); }
 
     this_type&
     operator<<(const char* s)
@@ -200,9 +201,9 @@ protected:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        stop_ = true;
+        soft_stop_ = true;
 
-        if (!closed_ && !writing_) {
+        if (!closed_ && wcq_.empty()) {
             base_type::postpone() << [this]() { close(); };
         }
     }
@@ -210,6 +211,8 @@ protected:
     void close()
     {
         std::lock_guard<std::mutex> lock(m_);
+
+        stop_ = true;
 
         if (!closed_ && socket_.is_open()) {
             error_code ec;
@@ -267,14 +270,18 @@ private:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        if (writing_ || stop_ || closed_) {
+        if (stop_ || closed_ || writing_) {
             return;
         }
 
         if (wcq_.empty()) {
-            base_type::postpone() << [this]() {
-                base_type::handler(tags::on_drain)(derived());
-            };
+            if (soft_stop_) {
+                base_type::postpone() << [this]() { stop(); };
+            } else {
+                base_type::postpone() << [this]() {
+                    base_type::handler(tags::on_drain)(derived());
+                };
+            }
 
             return;
         }
@@ -299,20 +306,7 @@ private:
             socket_,
             asio::buffer(b),
             [this](const error_code& ec, std::size_t count) {
-                writing_ = false;
-
-                if (stop_) {
-                    stop();
-                    return;
-                }
-
-                if (handle_error(derived(), "write", ec)) {
-                    return;
-                }
-
-                locked([&]() { wcq_.pop(); bq_.pop(); });
-
-                base_type::postpone() << [this](){ write(); };
+                handle_write("write_buffer", ec, bq_);
             }
         );
     }
@@ -325,30 +319,36 @@ private:
             *this,
             f,
             [this](const error_code& ec, std::size_t count) {
-                writing_ = false;
-
-                if (stop_) {
-                    stop();
-                    return;
-                }
-
-                if (handle_error(derived(), "send_file", ec)) {
-                    return;
-                }
-
-                locked([&]() { wcq_.pop(); fq_.pop(); });
-
-                base_type::postpone() << [this](){ write(); };
+                handle_write("send_file", ec, fq_);
             }
         );
+    }
+
+    template <typename Queue>
+    void handle_write(const char* what, const error_code& ec, Queue& q)
+    {
+        writing_ = false;
+
+        if (stop_) {
+            return;
+        }
+
+        if (handle_error(derived(), what, ec)) {
+            return;
+        }
+
+        locked([&]() { wcq_.pop(); q.pop(); });
+
+        base_type::postpone() << [this](){ write(); };
     }
 
     socket_type socket_;
     buffer buf_;
     buffer rbuf_;
-    bool stop_ = false;
-    bool writing_ = false;
-    bool closed_ = false;
+    std::atomic_bool writing_{ false };
+    std::atomic_bool stop_{ false };
+    std::atomic_bool soft_stop_{ false };
+    std::atomic_bool closed_{ false };
     write_cmd_queue wcq_;
     buffer_queue bq_;
     file_queue fq_;
