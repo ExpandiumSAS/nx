@@ -123,4 +123,12 @@ http_msg_base::operator<<(const jsonv::value& v)
     return *this;
 }
 
+http_msg_base&
+http_msg_base::operator<<(const file& f)
+{
+    data_ << f;
+
+    return *this;
+}
+
 } // namespace nx

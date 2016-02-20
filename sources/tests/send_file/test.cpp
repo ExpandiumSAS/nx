@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <nx/unit_test.hpp>
+#include <nx/system_config.hpp>
 
 #include <nx/nx.hpp>
 #include <nx/utils.hpp>
@@ -14,6 +15,10 @@ BOOST_AUTO_TEST_CASE(send_file)
     nx::timer deadline;
     nx::cond_var cv;
 
+    nx::system_config sc;
+    auto lorem_file = cxxu::cat_file(sc.test_data_dir(), "testfile.txt");
+    auto lorem_data = nx::slurp_file(lorem_file);
+
     deadline(5) = [&](nx::timer& t) {
         t.stop();
         cv.notify();
@@ -22,17 +27,16 @@ BOOST_AUTO_TEST_CASE(send_file)
     deadline.start();
 
     auto ep = make_endpoint("127.0.0.1");
-    const char* hello_world = "Hello, world!";
 
     httpd hd;
 
     bool got_request = false;
 
-    hd(GET) / "hello" = [&](const request& req, buffer& data, reply& rep) {
+    hd(GET) / "lorem" = [&](const request& req, buffer& data, reply& rep) {
         got_request = true;
         rep
             << text_plain
-            << hello_world
+            << nx::file{ lorem_file }
             ;
     };
 
@@ -43,10 +47,10 @@ BOOST_AUTO_TEST_CASE(send_file)
     bool got_reply = false;
     bool reply_ok = false;
 
-    hc(GET, sep) / "hello" = [&](const reply& rep, buffer& data) {
+    hc(GET, sep) / "lorem" = [&](const reply& rep, buffer& data) {
         got_reply = true;
 
-        reply_ok = rep && data == hello_world;
+        reply_ok = rep && data == lorem_data;
 
         deadline.stop();
         cv.notify();

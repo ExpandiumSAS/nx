@@ -58,6 +58,10 @@ NX_API
 std::string
 clean_path(const std::string& path);
 
+NX_API
+std::string
+slurp_file(const std::string& path);
+
 inline
 strings
 split(const std::string& re, const std::string& expr)

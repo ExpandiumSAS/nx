@@ -3,6 +3,9 @@
 
 #include <regex>
 #include <algorithm>
+#include <stdexcept>
+
+#include <cxxu/utils.hpp>
 
 #include <nx/utils.hpp>
 
@@ -107,6 +110,28 @@ clean_path(const std::string& path)
     }
 
     return cleaned;
+}
+
+std::string
+slurp_file(const std::string& path)
+{
+    if (!cxxu::file_exists(path)) {
+        throw std::runtime_error("cannot read " + path);
+    }
+
+    std::ifstream ifs(path, std::ios::binary);
+
+    if (!ifs.is_open()) {
+        throw std::runtime_error("failed to open " + path);
+    }
+
+    auto length = cxxu::file_size(path);
+    std::string s(length, ' ');
+
+    ifs.read(&*s.begin(), length);
+    ifs.close();
+
+    return s;
 }
 
 } // namespace nx

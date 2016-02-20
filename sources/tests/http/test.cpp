@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE(http_server)
 
     deadline.start();
 
-    auto ep = make_endpoint("127.0.0.1", 6666);
+    auto ep = make_endpoint("127.0.0.1");
     const char* hello_world = "Hello, world!";
 
     httpd hd;
