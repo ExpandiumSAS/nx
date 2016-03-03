@@ -6,6 +6,7 @@
 
 #include <cxxu/utils.hpp>
 #include <cxxu/logging.hpp>
+#include <cxxu/rw_tx.hpp>
 
 #include <nx/json_collection.hpp>
 
@@ -55,8 +56,9 @@ json_collection_base::load() const
     if (!dir_.empty()) {
         auto file = cxxu::cat_file(dir_, path_ + ".json");
 
-        auto loaded = cxxu::read_file(
-            file,
+        auto tx = cxxu::rw_tx(file);
+
+        auto loaded = tx(
             [&coll](std::ifstream& ifs) {
                 coll = jsonv::parse(ifs);
             }
@@ -80,8 +82,9 @@ json_collection_base::save(const jsonv::value& coll) const
 
     auto file = cxxu::cat_file(dir_, path_ + ".json");
 
-    auto saved = cxxu::write_file(
-        file,
+    auto tx = cxxu::rw_tx(file);
+
+    auto saved = tx(
         [&coll](std::ofstream& ofs) {
             ofs << coll;
         }
