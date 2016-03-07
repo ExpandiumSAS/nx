@@ -19,8 +19,10 @@ data::clear()
 data&
 data::operator<<(const file& f)
 {
-    make_file(f);
-    size_ += cxxu::file_size(f.path);
+    if (cxxu::file_exists(f.path)) {
+        make_file(f);
+        size_ += cxxu::file_size(f.path);
+    }
 
     return *this;
 }

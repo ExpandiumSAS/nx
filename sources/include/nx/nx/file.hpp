@@ -96,10 +96,11 @@ send_file(Socket& s, const file& f, Callable cb)
 {
     auto fs = detail::file_state{ f, -1, 0, 0 };
 
-    if (cxxu::file_exists(fs.f.path)) {
-        fs.total = cxxu::file_size(fs.f.path);
+    if (!cxxu::file_exists(fs.f.path)) {
+        return;
     }
 
+    fs.total = cxxu::file_size(fs.f.path);
     fs.fd = ::open(fs.f.path.c_str(), O_RDONLY);
 
     if (fs.fd == -1) {
