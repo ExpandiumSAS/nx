@@ -233,23 +233,36 @@ json_collection::PUT(const item_tag& t)
             throw BadRequest("request body is empty");
         }
 
+        jsonv::value old_value;
+        bool exists = false;
+
         try {
             json item(data);
 
             item.value()["id"] = id;
 
-            bool exists = (c_.find(id) != c_.end());
+            exists = (c_.find(id) != c_.end());
+
+            if (exists) {
+                old_value = c_[id];
+            }
 
             c_[id] = item.value();
-            save();
 
             if (exists) {
                 handler(tags::on_item_changed)(id);
             } else {
                 handler(tags::on_item_added)(id);
             }
+
+            save();
         } catch (const std::exception& e) {
-            c_.erase(id);
+            if (exists) {
+                c_[id] = old_value;
+                handler(tags::on_item_changed)(id);
+            } else {
+                c_.erase(id);
+            }
 
             throw BadRequest("bad JSON data: ", e);
         }
