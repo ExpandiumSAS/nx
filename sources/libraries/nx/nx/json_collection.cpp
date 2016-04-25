@@ -123,7 +123,7 @@ json_collection::load()
     auto coll = base_type::load();
 
     try {
-        put_collection(coll);
+        load_collection(coll);
     } catch (const std::exception& e) {
         cxxu::warning()
             << "collection '" << path() << "'"
@@ -146,30 +146,6 @@ json_collection::GET(const collection_tag& t)
 }
 
 route_cb
-json_collection::PUT(const collection_tag& t)
-{
-    return [&](const request& req, buffer& data, reply& rep) {
-        if (data.empty()) {
-            throw BadRequest("request body is empty");
-        }
-
-        auto old_c = c_;
-
-        try {
-            clear_collection();
-
-            json arr(data);
-            put_collection(arr.value());
-            save();
-        } catch (const std::exception& e) {
-            c_ = std::move(old_c);
-
-            throw BadRequest("bad JSON data: ", e);
-        }
-    };
-}
-
-route_cb
 json_collection::POST(const collection_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
@@ -185,7 +161,7 @@ json_collection::POST(const collection_tag& t)
             item.value()["id"] = id;
             c_.emplace(id, item.value());
             save();
-            handler(tags::on_item_added)(id);
+            handler(tags::on_item_added)(id, c_[id], rep);
 
             rep
                 << Created
@@ -196,15 +172,6 @@ json_collection::POST(const collection_tag& t)
 
             throw BadRequest("bad JSON data: ", e);
         }
-    };
-}
-
-route_cb
-json_collection::DELETE(const collection_tag& t)
-{
-    return [&](const request& req, buffer& data, reply& rep) {
-        clear_collection();
-        save();
     };
 }
 
@@ -250,16 +217,16 @@ json_collection::PUT(const item_tag& t)
             c_[id] = item.value();
 
             if (exists) {
-                handler(tags::on_item_changed)(id);
+                handler(tags::on_item_changed)(id, c_[id], rep);
             } else {
-                handler(tags::on_item_added)(id);
+                handler(tags::on_item_added)(id, c_[id], rep);
             }
 
             save();
         } catch (const std::exception& e) {
             if (exists) {
                 c_[id] = old_value;
-                handler(tags::on_item_changed)(id);
+                handler(tags::on_item_changed)(id, c_[id], rep);
             } else {
                 c_.erase(id);
             }
@@ -275,8 +242,10 @@ json_collection::DELETE(const item_tag& t)
     return [&](const request& req, buffer& data, reply& rep) {
         const auto& id = req.a("id");
 
-        if (c_.find(id) != c_.end()) {
-            handler(tags::on_item_removed)(id);
+        auto it = c_.find(id);
+
+        if (it != c_.end()) {
+            handler(tags::on_item_removed)(id, it->second, rep);
             c_.erase(id);
             save();
         } else {
@@ -286,49 +255,25 @@ json_collection::DELETE(const item_tag& t)
 }
 
 void
-json_collection::put_collection(const jsonv::value& c)
+json_collection::load_collection(const jsonv::value& c)
 {
-    std::size_t error_count = 0;
-    std::ostringstream oss;
+    try {
+        for (auto& v : c.as_array()) {
+            auto it = v.find("id");
 
-    for (auto& v : c.as_array()) {
-        auto it = v.find("id");
-
-        if (it == v.end_object()) {
-            continue;
-        }
-
-        id_type id;
-
-        try {
-            id = it->second.as_string();
-            c_[id] = v;
-            handler(tags::on_item_added)(id);
-        } catch (const std::exception& e) {
-            // Bad item
-            c_.erase(id);
-
-            if (error_count++) {
-                oss << "\n";
+            if (it == v.end_object()) {
+                continue;
             }
 
-            oss << "bad item " << id << ": " << e.what();
+            id_type id = it->second.as_string();
+            c_[id] = v;
         }
-    }
 
-    if (error_count > 0) {
-        throw std::runtime_error(oss.str());
+        handler(tags::on_collection_loaded)(c);
+    } catch (...) {
+        c_.clear();
+        throw;
     }
-}
-
-void
-json_collection::clear_collection()
-{
-    for (const auto& p : c_) {
-        handler(tags::on_item_removed)(p.first);
-    }
-
-    c_.clear();
 }
 
 jsonv::value

@@ -18,6 +18,10 @@ namespace nx {
 
 namespace tags {
 
+struct on_collection_loaded_tag : callback_tag {};
+
+const on_collection_loaded_tag on_collection_loaded = {};
+
 struct on_item_added_tag : callback_tag {};
 struct on_item_removed_tag : callback_tag {};
 struct on_item_changed_tag : callback_tag {};
@@ -36,9 +40,10 @@ class NX_API json_collection_base
 public:
     using id_type = std::string;
     using callbacks = nx::callbacks<
-        callback<tags::on_item_added_tag, id_type>,
-        callback<tags::on_item_removed_tag, id_type>,
-        callback<tags::on_item_changed_tag, id_type>
+        callback<tags::on_collection_loaded_tag, const jsonv::value&>,
+        callback<tags::on_item_added_tag, id_type, const jsonv::value&, reply&>,
+        callback<tags::on_item_removed_tag, id_type, const jsonv::value&, reply&>,
+        callback<tags::on_item_changed_tag, id_type, const jsonv::value&, reply&>
     >;
 
     json_collection_base(const std::string& path);
@@ -64,9 +69,7 @@ public:
     void set_dir(const std::string& path);
 
     virtual route_cb GET(const collection_tag& t) = 0;
-    virtual route_cb PUT(const collection_tag& t) = 0;
     virtual route_cb POST(const collection_tag& t) = 0;
-    virtual route_cb DELETE(const collection_tag& t) = 0;
     virtual route_cb GET(const item_tag& t) = 0;
     virtual route_cb PUT(const item_tag& t) = 0;
     virtual route_cb DELETE(const item_tag& t) = 0;
@@ -103,16 +106,13 @@ public:
     void save() const;
 
     virtual route_cb GET(const collection_tag& t);
-    virtual route_cb PUT(const collection_tag& t);
     virtual route_cb POST(const collection_tag& t);
-    virtual route_cb DELETE(const collection_tag& t);
     virtual route_cb GET(const item_tag& t);
     virtual route_cb PUT(const item_tag& t);
     virtual route_cb DELETE(const item_tag& t);
 
 private:
-    void put_collection(const jsonv::value& c);
-    void clear_collection();
+    void load_collection(const jsonv::value& c);
     jsonv::value get_collection() const;
 
     values_type c_;
@@ -152,26 +152,6 @@ public:
         };
     }
 
-    route_cb PUT(const collection_tag& t)
-    {
-        return [&](const request& req, buffer& data, reply& rep) {
-            if (data.empty()) {
-                throw BadRequest("request body is empty");
-            }
-
-            auto old_c = c_;
-
-            try {
-                c_.clear();
-                json(data) >> c_;
-            } catch (const std::exception& e) {
-                c_ = std::move(old_c);
-
-                throw BadRequest("bad JSON data: ", e);
-            }
-        };
-    }
-
     route_cb POST(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
@@ -195,13 +175,6 @@ public:
             } catch (const std::exception& e) {
                 throw BadRequest("bad JSON data: ", e);
             }
-        };
-    }
-
-    route_cb DELETE(const collection_tag& t)
-    {
-        return [&](const request& req, buffer& data, reply& rep) {
-            c_.clear();
         };
     }
 

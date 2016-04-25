@@ -36,9 +36,7 @@ httpd::operator<<(json_collection_base& c)
     collection_tag ct;
 
     me(GET) / c.path() = c.GET(ct);
-    me(PUT) / c.path() = c.PUT(ct);
     me(POST) / c.path() = c.POST(ct);
-    me(DELETE) / c.path() = c.DELETE(ct);
 
     // Operations on a specific item
     item_tag it;
