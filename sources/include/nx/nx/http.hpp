@@ -7,6 +7,7 @@
 #include <nx/tcp.hpp>
 #include <nx/request.hpp>
 #include <nx/reply.hpp>
+#include <nx/handlers.hpp>
 
 namespace nx {
 
@@ -45,6 +46,7 @@ public:
 private:
     bool request_parsed();
     bool reply_parsed();
+    void call_or_fail(void_cb cb);
 
     bool parsed_ = false;
     request req_;

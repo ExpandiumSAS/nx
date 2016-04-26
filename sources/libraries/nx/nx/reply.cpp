@@ -3,6 +3,7 @@
 
 #include <nx/reply.hpp>
 #include <nx/utils.hpp>
+#include <cxxu/logging.hpp>
 
 namespace nx {
 
@@ -24,7 +25,7 @@ reply::operator=(reply&& other)
     status_ = std::move(other.status_);
 
     postponed_ = other.postponed_;
-    done_cb_ = std::move(other.done_cb_);
+    done_cbs_ = std::move(other.done_cbs_);
 
     minor_version_ = other.minor_version_;
     raw_status_ = other.raw_status_;
@@ -75,6 +76,10 @@ const http_status&
 reply::code() const
 { return status_; }
 
+bool
+reply::is_error() const
+{ return status_.is_error(); }
+
 std::string
 reply::header_data() const
 {
@@ -105,14 +110,20 @@ reply::postponed()
 void
 reply::done()
 {
-    if (done_cb_) {
-        done_cb_();
+    while (!done_cbs_.empty()) {
+        auto cb = std::move(done_cbs_.back());
+        done_cbs_.pop_back();
+
+        try {
+            cb();
+        } catch (const std::exception& e) {
+            cxxu::error()
+                << "reply callback failed (ignored): "
+                << e.what()
+                ;
+        }
     }
 }
-
-void_cb&
-reply::on_done()
-{ return done_cb_; }
 
 bool
 reply::operator==(const http_status& s) const
@@ -123,17 +134,39 @@ reply::operator!=(const http_status& s) const
 { return !(*this == s); }
 
 reply&
+reply::operator|(void_cb cb)
+{
+    done_cbs_.emplace_back(cb);
+
+    return *this;
+}
+
+reply&
 reply::operator<<(const http_status& s)
 {
     status_ = s;
-
-    if (s.is_error()) {
-        data_.clear();
-        jsonv::value e = jsonv::object({{ "error", s.error }});
-        *this << e;
-    }
+    handle_error();
 
     return *this;
+}
+
+reply&
+reply::operator<<(const std::exception& e)
+{
+    status_ = status_(e);
+    handle_error();
+
+    return *this;
+}
+
+void
+reply::handle_error()
+{
+    if (status_.is_error()) {
+        data_.clear();
+        jsonv::value e = jsonv::object({{ "error", status_.error }});
+        *this << e;
+    }
 }
 
 } // namespace nx

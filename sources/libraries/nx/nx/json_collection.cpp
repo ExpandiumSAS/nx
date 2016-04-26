@@ -155,23 +155,38 @@ json_collection::POST(const collection_tag& t)
 
         auto id = make_id();
 
-        try {
-            json item(data);
+        locked([&]() {
+            try {
+                json item(data);
 
-            item.value()["id"] = id;
-            c_.emplace(id, item.value());
-            save();
-            handler(tags::on_item_added)(id, c_[id], rep);
+                item.value()["id"] = id;
+                c_.emplace(id, item.value());
+                save();
+            } catch (const std::exception& e) {
+                c_.erase(id);
 
-            rep
-                << Created
-                << header{ location, join("/", path(), id) }
-                ;
-        } catch (const std::exception& e) {
-            c_.erase(id);
+                throw BadRequest("bad JSON data: ", e);
+            }
 
-            throw BadRequest("bad JSON data: ", e);
-        }
+            try {
+                handler(tags::on_item_added)(id, c_[id], rep);
+
+                rep
+                    << Created
+                    << header{ location, join("/", path(), id) }
+                    ;
+            } catch (const std::exception& e) {
+                c_.erase(id);
+
+                throw BadRequest("failed to create new item: ", e);
+            }
+        });
+
+        rep | [this,id,&rep]() {
+            if (rep.is_error()) {
+                locked([&]() { c_.erase(id); });
+            }
+        };
     };
 }
 
@@ -180,13 +195,16 @@ json_collection::GET(const item_tag& t)
 {
     return [&](const request& req, buffer& data, reply& rep) {
         const auto& id = req.a("id");
-        auto it = c_.find(id);
 
-        if (it != c_.end()) {
-            rep << it->second;
-        } else {
-            rep << NotFound;
-        }
+        locked([this,id,&rep]() {
+            auto it = c_.find(id);
+
+            if (it != c_.end()) {
+                rep << it->second;
+            } else {
+                rep << NotFound;
+            }
+        });
     };
 }
 
@@ -203,36 +221,44 @@ json_collection::PUT(const item_tag& t)
         jsonv::value old_value;
         bool exists = false;
 
-        try {
-            json item(data);
+        locked([&]() {
+            try {
+                json item(data);
 
-            item.value()["id"] = id;
+                item.value()["id"] = id;
 
-            exists = (c_.find(id) != c_.end());
+                exists = (c_.find(id) != c_.end());
 
-            if (exists) {
-                old_value = c_[id];
+                if (exists) {
+                    old_value = c_[id];
+                }
+
+                c_[id] = item.value();
+
+                if (exists) {
+                    handler(tags::on_item_changed)(id, c_[id], rep);
+                } else {
+                    handler(tags::on_item_added)(id, c_[id], rep);
+                }
+
+                save();
+            } catch (const std::exception& e) {
+                if (exists) {
+                    c_[id] = old_value;
+                    handler(tags::on_item_changed)(id, c_[id], rep);
+                } else {
+                    c_.erase(id);
+                }
+
+                throw BadRequest("bad JSON data: ", e);
             }
+        });
 
-            c_[id] = item.value();
-
-            if (exists) {
-                handler(tags::on_item_changed)(id, c_[id], rep);
-            } else {
-                handler(tags::on_item_added)(id, c_[id], rep);
+        rep | [this,id,&rep]() {
+            if (rep.is_error()) {
+                locked([&]() { c_.erase(id); });
             }
-
-            save();
-        } catch (const std::exception& e) {
-            if (exists) {
-                c_[id] = old_value;
-                handler(tags::on_item_changed)(id, c_[id], rep);
-            } else {
-                c_.erase(id);
-            }
-
-            throw BadRequest("bad JSON data: ", e);
-        }
+        };
     };
 }
 
@@ -242,15 +268,17 @@ json_collection::DELETE(const item_tag& t)
     return [&](const request& req, buffer& data, reply& rep) {
         const auto& id = req.a("id");
 
-        auto it = c_.find(id);
+        locked([&]() {
+            auto it = c_.find(id);
 
-        if (it != c_.end()) {
-            handler(tags::on_item_removed)(id, it->second, rep);
-            c_.erase(id);
-            save();
-        } else {
-            throw NotFound;
-        }
+            if (it != c_.end()) {
+                handler(tags::on_item_removed)(id, it->second, rep);
+                c_.erase(id);
+                save();
+            } else {
+                throw NotFound;
+            }
+        });
     };
 }
 

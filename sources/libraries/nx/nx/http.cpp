@@ -33,37 +33,49 @@ http::reply_parsed()
 }
 
 void
-http::process_request()
+http::call_or_fail(void_cb cb)
 {
     try {
-        if (!request_parsed() || rbuf().size() < req_.content_length()) {
-            // Wait until request is complete
-            return;
-        }
-
-        if (req_.is_form()) {
-            // Decode additional variables from body
-            // TODO: implement iterator based function to avoid copy
-            std::string body;
-            rbuf() >> body;
-            req_ << attributes(body, '&');
-        }
-
-        rep_ << connection_close;
-
-        // All data arrived, call upper handler
-        request_cb_(req_, rbuf(), rep_);
+        cb();
     } catch (const http_status& s) {
         rep_ << s;
     } catch (const std::exception& e) {
         std::cout << "BadRequest by " << e.what() << std::endl;
         rep_ << BadRequest(e);
     }
+}
 
-    rep_.on_done() = [this]() {
-        *this << rep_;
-        close_after_write();
-    };
+void
+http::process_request()
+{
+    call_or_fail(
+        [&]() {
+            if (!request_parsed() || rbuf().size() < req_.content_length()) {
+                // Wait until request is complete
+                return;
+            }
+
+            if (req_.is_form()) {
+                // Decode additional variables from body
+                // TODO: implement iterator based function to avoid copy
+                std::string body;
+                rbuf() >> body;
+                req_ << attributes(body, '&');
+            }
+
+            rep_ << connection_close;
+
+            // Register callback to be called when reply is ready to send
+            // (will be called last by rep.done())
+            rep_ | [this]() {
+                *this << rep_;
+                close_after_write();
+            };
+
+            // All data arrived, call upper handler
+            request_cb_(req_, rbuf(), rep_);
+        }
+    );
 
     if (!rep_.postponed()) {
         rep_.done();

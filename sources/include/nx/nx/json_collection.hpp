@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <string>
 #include <type_traits>
+#include <mutex>
 
 #include <jsonv/serialization_builder.hpp>
 
@@ -112,10 +113,18 @@ public:
     virtual route_cb DELETE(const item_tag& t);
 
 private:
+    void locked(void_cb cb)
+    {
+        std::lock_guard<std::mutex> lock(cm_);
+
+        cb();
+    }
+
     void load_collection(const jsonv::value& c);
     jsonv::value get_collection() const;
 
     values_type c_;
+    std::mutex cm_;
 };
 
 template <typename T>

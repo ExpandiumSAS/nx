@@ -31,6 +31,7 @@ public:
     std::string header_data() const;
 
     const http_status& code() const;
+    bool is_error() const;
 
     void postpone();
     bool postponed();
@@ -40,19 +41,19 @@ public:
     bool operator==(const http_status& s) const;
     bool operator!=(const http_status& s) const;
 
-    using http_msg::operator<<;
+    reply& operator|(void_cb cb);
 
     reply& operator<<(const http_status& s);
+    reply& operator<<(const std::exception& e);
 
-protected:
-    friend class http;
-
-    void_cb& on_done();
+    using http_msg::operator<<;
 
 private:
+    void handle_error();
+
     http_status status_;
     bool postponed_;
-    void_cb done_cb_;
+    void_cbs done_cbs_;
 
     int minor_version_;
     int raw_status_;

@@ -45,12 +45,12 @@ public:
     }
 
     template <typename T>
-    data& operator<<(const T& v)
+    data& operator<<(T&& v)
     {
         auto& s = make_stream();
         auto old_size = stream_size();
 
-        s << v;
+        s << std::forward<T>(v);
 
         size_ += stream_size() - old_size;
 

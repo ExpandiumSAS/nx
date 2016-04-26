@@ -51,9 +51,9 @@ public:
     http_msg_base& operator<<(const file& f);
 
     template <typename T>
-    http_msg_base& operator<<(const T& v)
+    http_msg_base& operator<<(T&& v)
     {
-        data_ << v;
+        data_ << std::forward<T>(v);
 
         return *this;
     }
