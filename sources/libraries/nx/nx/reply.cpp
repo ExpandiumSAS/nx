@@ -152,12 +152,7 @@ reply::operator<<(const http_status& s)
 
 reply&
 reply::operator<<(const std::exception& e)
-{
-    status_ = status_(e);
-    handle_error();
-
-    return *this;
-}
+{ return (*this) << BadRequest(e); }
 
 void
 reply::handle_error()
