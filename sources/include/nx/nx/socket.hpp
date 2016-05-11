@@ -337,9 +337,17 @@ private:
             return;
         }
 
-        locked([&]() { wcq_.pop(); q.pop(); });
+        locked([&]() { pop_queue(wcq_); pop_queue(q); });
 
         base_type::postpone() << [this](){ write(); };
+    }
+
+    template <typename Queue>
+    void pop_queue(Queue& q)
+    {
+        if (!q.empty()) {
+            q.pop();
+        }
     }
 
     socket_type socket_;
