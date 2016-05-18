@@ -31,7 +31,7 @@ json::json(buffer& b)
 
 jsonv::value&&
 json::value() &&
-{ return v_; }
+{ return std::move(v_); }
 
 jsonv::value&
 json::value() &
