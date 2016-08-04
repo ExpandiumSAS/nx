@@ -67,9 +67,12 @@ http::process_request()
 
             // Register callback to be called when reply is ready to send
             // (will be called last by rep.done())
-            rep_ | [this]() {
+            auto self = ptr();
+
+            rep_ | [this,self]() mutable {
                 *this << rep_;
                 close_after_write();
+                self.reset();
             };
 
             // All data arrived, call upper handler
