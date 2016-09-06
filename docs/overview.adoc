@@ -63,7 +63,7 @@ hd(GET) / "path" / ":id" = [&](const request& req, buffer& data, reply& rep) {
 <1> Extract the `id` attribute
 <2> Sets `Content-Type`. A short hand for `header{ Content_Type, "text/plain" }`
     (see `nx/headers.hpp`).
-<3> Any "std::ostream"-able object can be used
+<3> Any `std::ostream`-able object can be used
 
 [NOTE]
 .Exception handling
@@ -138,3 +138,36 @@ hc(GET, endpoint)
     };
 
 ----
+
+== JSON
+
+nx relies on the http://tgockel.github.io/json-voorhees[JSON Voorhees]
+library for JSON handling.
+
+A very simple wrapper, `nx::json`, allows you to easily handle JSON data using
+`jsonv::value` objects.
+
+[source,cpp]
+.Parsing incoming JSON
+----
+// Inside a request or reply handler...
+const auto& v = json(data).value(); // <1> <2>
+----
+<1> `data` is a `nx::buffer`
+<2> `value()` returns a `jsonv::value&`
+
+[source,cpp]
+.Sending JSON in a POST request
+----
+hc(POST, endpoint)
+    / "persons"
+    << jsonv::object({ // <1>
+        { "id", "42" },
+        { "name", "Bart Simpson" },
+        { "age", 15 }
+    })
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply...
+    };
+----
+<1> Object is serialized and appropriate headers are set

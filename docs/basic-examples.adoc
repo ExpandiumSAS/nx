@@ -8,7 +8,7 @@ A simple "Hello, world!" server:
 
 using namespace nx;
 
-int main(int ac, char **av)
+int main(int ac, char** av)
 {
     httpd srv;
 
@@ -35,7 +35,7 @@ The corresponding client:
 
 using namespace nx;
 
-int main(int ac, char **av)
+int main(int ac, char** av)
 {
     httpc cli;
 
