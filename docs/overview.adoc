@@ -1,0 +1,8 @@
+= Overview
+
+nx is an unobstrusive asynchronous and multithreaded library modeled after
+modern equivalent libraries found in scripting languages.
+
+It emphasizes on using operator overloading for almost every aspect of HTTP
+request and reponse handling, focusing more on what you want to express in an
+"HTTP way" rather than how to do it in C++.
