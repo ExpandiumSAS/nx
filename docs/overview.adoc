@@ -6,3 +6,135 @@ modern equivalent libraries found in scripting languages.
 It emphasizes on using operator overloading for almost every aspect of HTTP
 request and reponse handling, focusing more on what you want to express in an
 "HTTP way" rather than how to do it in C++.
+
+== Server side
+
+Route declaration is handled through `nx::httpd` class, using
+C++ tags (empty structs) for each HTTP verb (GET, PUT, POST, DELETE) and
+any kind of callable object to act as a handler for that route.
+
+=== Declaring a route
+
+[source,cpp]
+----
+nx::httpd hd; // <1>
+
+hd(nx::GET) // <2>
+    / "some" / "location" / ":id" // <3>
+    = [&](
+        const nx::request& req, // <4>
+        nx::buffer& data, // <5>
+        nx::reply& rep // <6>
+    ) {
+        // Reply code...
+    };
+
+hd(nx::make_endpoint("127.0.0.1", 3000)); // <7>
+
+----
+<1> Default constuctor, no arguments
+<2> HTTP method to serve
+<3> Route path, with optional attribute placeholders
+<4> Request object containing all request metadata
+<5> Raw request body, as sent by client (i.e.: `std::vector<char>`)
+<6> Reply object to fill with reply data
+<7> Start serving requests, asynchronously
+
+=== Handling a request
+
+Starting with the previous example, let's reply to a request. From now on,
+we'll assume all code is `using namespace nx;` for the sake of clarity.
+
+[source,cpp]
+----
+httpd hd;
+
+hd(GET) / "path" / ":id" = [&](const request& req, buffer& data, reply& rep) {
+    const auto& id = req.a("id"); // <1>
+
+    rep
+        << text_plain // <2>
+        << "Someone made a GET request on /path/" << id << "\n"
+        << "Id is:" << id << "\n"
+        << "Additional data:\n" << data // <3>
+        ;
+};
+----
+<1> Extract the `id` attribute
+<2> Sets `Content-Type`. A short hand for `header{ Content_Type, "text/plain" }`
+    (see `nx/headers.hpp`).
+<3> Any "std::ostream"-able object can be used
+
+[NOTE]
+.Exception handling
+====
+nx internally encloses calls to method handlers in a try/catch block.
+
+If something throws while calling a handler, a standard error reply will be
+made.
+====
+
+== Client side
+
+HTTP requests are handled through `nx::httpc` class, using
+C++ tags (empty structs) for each HTTP verb (GET, PUT, POST, DELETE) and
+any kind of callable object to act as a handler for that request.
+
+=== Making a request
+
+[source,cpp]
+----
+httpc hc; // <1>
+auto endpoint = make_endpoint("127.0.0.1", 3000);
+
+hc(GET, endpoint) // <2>
+    / "some" / "location" / "1234" // <3>
+    = [&](
+        const reply& rep, // <4>
+        nx::buffer& data // <5>
+    ) {
+        // Request result handling code...
+    };
+
+----
+<1> Default constuctor, no arguments
+<2> HTTP request method
+<3> Request URI
+<4> Reply object containing all reply metadata
+<5> Raw reply body, as sent by the server (i.e.: `std::vector<char>`)
+
+[NOTE]
+.Request start
+====
+nx will start a request as soon as a handler is attached to a route.
+====
+
+=== Handling a reply
+
+[source,cpp]
+----
+httpc hc;
+auto endpoint = make_endpoint("127.0.0.1", 3000);
+
+hc(GET, endpoint)
+    / "some" / "location" / "1234"
+    = [&](
+        const reply& rep,
+        nx::buffer& data
+    ) {
+        if (!rep) {
+            std::cout
+                << "Request failed: "
+                << rep.code().what()
+                ;
+        } else {
+            std::cout
+                << "Server replied:\n"
+                << data
+                ;
+        }
+
+        std::cout << std::endl;
+    };
+
+----
