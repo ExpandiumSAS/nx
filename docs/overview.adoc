@@ -171,3 +171,131 @@ hc(POST, endpoint)
     };
 ----
 <1> Object is serialized and appropriate headers are set
+
+== Waiting for something
+
+Due to its asynchronous design, nearly all nx operations start as soon as
+possible. This means the control path immediately returns where you start
+an operation.
+
+[source,cpp]
+.Asynchronous control path
+----
+// Somewhere in your code... you start a POST request <1>
+hc(POST, endpoint)
+    / "persons"
+    << jsonv::object({...})
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply <3>
+    };
+// Operation started <2>
+----
+<1> t0, before you start an operation
+<2> t1 > t0, operation started (in progress)
+<3> t2 > t1, operation done
+
+This might be disruptive or inappropriate in some situations and you might
+want to wait for an operation to complete before continuing. nx has a simple
+`nx::cond_var` class to allow this.
+
+[source,cpp]
+.Synchronous control path
+----
+// Somewhere in your code... you start a POST request <1>
+cond_var cv;
+
+hc(POST, endpoint)
+    / "persons"
+    << jsonv::object({...})
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply <4>
+        cv.notify(); // <5>
+    };
+// Operation started <2>
+cv.wait(); <3>
+// Control resumes <6>
+----
+<1> t0, before you start an operation
+<2> t1 > t0, operation started (in progress)
+<3> Suspend control path until condition variable is notified
+<4> t2 > t1, operation done
+<5> Notify (unlock) the condition variable
+<6> Back in your code
+
+== Reply postponing
+
+When handling a request, you might not be able to reply immediately and want
+to postpone the HTTP reply until something else is ready
+(e.g.: some other processing, an HTTP subrequest, ...).
+
+Simply call `nx::reply::postpone()` method anytime before returning from
+the route handler and call `nx::reply::done()` somewhere else to finish the
+HTTP reply.
+
+[source,cpp]
+.Postponing a reply
+----
+hd(POST)
+    / "persons"
+    = [&](const request& req, buffer& data, reply& rep) {
+        // Let's pretend we can't reply now
+        rep.postpone(); // <1>
+
+        // Call another asynchronous operation with it's own callback
+        something(
+            [&]() {
+                // Something is finished, reply can be made
+                rep.done(); // <2>
+            }
+        );
+    };
+----
+<1> Tell server to delay reply after this handler returns
+<2> Tell server to make reply
+
+== HTTP headers
+
+HTTP headers for both `nx::request` and `nx::reply` are set using the
+overloaded `operator<<()` and a `nx::header` object.
+
+[source,cpp]
+.Setting headers for request
+----
+hc(POST, endpoint)
+    / "persons"
+    << header{ Content_Type, "application/json" }
+    << header{ "X-Special-Header", "some useful information" }
+    << jsonv::object({...})
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply
+    };
+----
+
+[source,cpp]
+.Setting headers for reply
+----
+hd(POST)
+    / "persons"
+    = [&](const request& req, buffer& data, reply& rep) {
+        rep
+            << header{ "X-Protocol-Version", "42" }
+            << ...
+            ;
+    };
+----
+
+== File transfert / sendfile support
+
+Both `nx::request` and `nx::reply` allow you to send files using the very
+efficient `sendfile(2)` system call. Simply stream a `nx::file` object.
+
+[source,cpp]
+.Sending files
+----
+hc(POST, endpoint)
+    / "persons"
+    << file{ "/path/to/my_big_file.json" }
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply
+    };
+----
