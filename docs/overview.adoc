@@ -1,0 +1,301 @@
+= Overview
+
+nx is an unobstrusive asynchronous and multithreaded library modeled after
+modern equivalent libraries found in scripting languages.
+
+It emphasizes on using operator overloading for almost every aspect of HTTP
+request and reponse handling, focusing more on what you want to express in an
+"HTTP way" rather than how to do it in C++.
+
+== Server side
+
+Route declaration is handled through `nx::httpd` class, using
+C++ tags (empty structs) for each HTTP verb (GET, PUT, POST, DELETE) and
+any kind of callable object to act as a handler for that route.
+
+=== Declaring a route
+
+[source,cpp]
+----
+nx::httpd hd; // <1>
+
+hd(nx::GET) // <2>
+    / "some" / "location" / ":id" // <3>
+    = [&](
+        const nx::request& req, // <4>
+        nx::buffer& data, // <5>
+        nx::reply& rep // <6>
+    ) {
+        // Reply code...
+    };
+
+hd(nx::make_endpoint("127.0.0.1", 3000)); // <7>
+
+----
+<1> Default constuctor, no arguments
+<2> HTTP method to serve
+<3> Route path, with optional attribute placeholders
+<4> Request object containing all request metadata
+<5> Raw request body, as sent by client (i.e.: `std::vector<char>`)
+<6> Reply object to fill with reply data
+<7> Start serving requests, asynchronously
+
+=== Handling a request
+
+Starting with the previous example, let's reply to a request. From now on,
+we'll assume all code is `using namespace nx;` for the sake of clarity.
+
+[source,cpp]
+----
+httpd hd;
+
+hd(GET) / "path" / ":id" = [&](const request& req, buffer& data, reply& rep) {
+    const auto& id = req.a("id"); // <1>
+
+    rep
+        << text_plain // <2>
+        << "Someone made a GET request on /path/" << id << "\n"
+        << "Id is:" << id << "\n"
+        << "Additional data:\n" << data // <3>
+        ;
+};
+----
+<1> Extract the `id` attribute
+<2> Sets `Content-Type`. A short hand for `header{ Content_Type, "text/plain" }`
+    (see `nx/headers.hpp`).
+<3> Any `std::ostream`-able object can be used
+
+[NOTE]
+.Exception handling
+====
+nx internally encloses calls to method handlers in a try/catch block.
+
+If something throws while calling a handler, a standard error reply will be
+made.
+====
+
+== Client side
+
+HTTP requests are handled through `nx::httpc` class, using
+C++ tags (empty structs) for each HTTP verb (GET, PUT, POST, DELETE) and
+any kind of callable object to act as a handler for that request.
+
+=== Making a request
+
+[source,cpp]
+----
+httpc hc; // <1>
+auto endpoint = make_endpoint("127.0.0.1", 3000);
+
+hc(GET, endpoint) // <2>
+    / "some" / "location" / "1234" // <3>
+    = [&](
+        const reply& rep, // <4>
+        nx::buffer& data // <5>
+    ) {
+        // Request result handling code...
+    };
+
+----
+<1> Default constuctor, no arguments
+<2> HTTP request method
+<3> Request URI
+<4> Reply object containing all reply metadata
+<5> Raw reply body, as sent by the server (i.e.: `std::vector<char>`)
+
+[NOTE]
+.Request start
+====
+nx will start a request as soon as a handler is attached to a route.
+====
+
+=== Handling a reply
+
+[source,cpp]
+----
+httpc hc;
+auto endpoint = make_endpoint("127.0.0.1", 3000);
+
+hc(GET, endpoint)
+    / "some" / "location" / "1234"
+    = [&](
+        const reply& rep,
+        nx::buffer& data
+    ) {
+        if (!rep) {
+            std::cout
+                << "Request failed: "
+                << rep.code().what()
+                ;
+        } else {
+            std::cout
+                << "Server replied:\n"
+                << data
+                ;
+        }
+
+        std::cout << std::endl;
+    };
+
+----
+
+== JSON
+
+nx relies on the http://tgockel.github.io/json-voorhees[JSON Voorhees]
+library for JSON handling.
+
+A very simple wrapper, `nx::json`, allows you to easily handle JSON data using
+`jsonv::value` objects.
+
+[source,cpp]
+.Parsing incoming JSON
+----
+// Inside a request or reply handler...
+const auto& v = json(data).value(); // <1> <2>
+----
+<1> `data` is a `nx::buffer`
+<2> `value()` returns a `jsonv::value&`
+
+[source,cpp]
+.Sending JSON in a POST request
+----
+hc(POST, endpoint)
+    / "persons"
+    << jsonv::object({ // <1>
+        { "id", "42" },
+        { "name", "Bart Simpson" },
+        { "age", 15 }
+    })
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply...
+    };
+----
+<1> Object is serialized and appropriate headers are set
+
+== Waiting for something
+
+Due to its asynchronous design, nearly all nx operations start as soon as
+possible. This means the control path immediately returns where you start
+an operation.
+
+[source,cpp]
+.Asynchronous control path
+----
+// Somewhere in your code... you start a POST request <1>
+hc(POST, endpoint)
+    / "persons"
+    << jsonv::object({...})
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply <3>
+    };
+// Operation started <2>
+----
+<1> t0, before you start an operation
+<2> t1 > t0, operation started (in progress)
+<3> t2 > t1, operation done
+
+This might be disruptive or inappropriate in some situations and you might
+want to wait for an operation to complete before continuing. nx has a simple
+`nx::cond_var` class to allow this.
+
+[source,cpp]
+.Synchronous control path
+----
+// Somewhere in your code... you start a POST request <1>
+cond_var cv;
+
+hc(POST, endpoint)
+    / "persons"
+    << jsonv::object({...})
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply <4>
+        cv.notify(); // <5>
+    };
+// Operation started <2>
+cv.wait(); <3>
+// Control resumes <6>
+----
+<1> t0, before you start an operation
+<2> t1 > t0, operation started (in progress)
+<3> Suspend control path until condition variable is notified
+<4> t2 > t1, operation done
+<5> Notify (unlock) the condition variable
+<6> Back in your code
+
+== Reply postponing
+
+When handling a request, you might not be able to reply immediately and want
+to postpone the HTTP reply until something else is ready
+(e.g.: some other processing, an HTTP subrequest, ...).
+
+Simply call `nx::reply::postpone()` method anytime before returning from
+the route handler and call `nx::reply::done()` somewhere else to finish the
+HTTP reply.
+
+[source,cpp]
+.Postponing a reply
+----
+hd(POST)
+    / "persons"
+    = [&](const request& req, buffer& data, reply& rep) {
+        // Let's pretend we can't reply now
+        rep.postpone(); // <1>
+
+        // Call another asynchronous operation with it's own callback
+        something(
+            [&]() {
+                // Something is finished, reply can be made
+                rep.done(); // <2>
+            }
+        );
+    };
+----
+<1> Tell server to delay reply after this handler returns
+<2> Tell server to make reply
+
+== HTTP headers
+
+HTTP headers for both `nx::request` and `nx::reply` are set using the
+overloaded `operator<<()` and a `nx::header` object.
+
+[source,cpp]
+.Setting headers for request
+----
+hc(POST, endpoint)
+    / "persons"
+    << header{ Content_Type, "application/json" }
+    << header{ "X-Special-Header", "some useful information" }
+    << jsonv::object({...})
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply
+    };
+----
+
+[source,cpp]
+.Setting headers for reply
+----
+hd(POST)
+    / "persons"
+    = [&](const request& req, buffer& data, reply& rep) {
+        rep
+            << header{ "X-Protocol-Version", "42" }
+            << ...
+            ;
+    };
+----
+
+== File transfert / sendfile support
+
+Both `nx::request` and `nx::reply` allow you to send files using the very
+efficient `sendfile(2)` system call. Simply stream a `nx::file` object.
+
+[source,cpp]
+.Sending files
+----
+hc(POST, endpoint)
+    / "persons"
+    << file{ "/path/to/my_big_file.json" }
+    = [&](const reply& rep, buffer& data) {
+        // Handle reply
+    };
+----

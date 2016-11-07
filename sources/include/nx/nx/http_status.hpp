@@ -62,6 +62,7 @@ const http_status BadRequest = { 400, "Bad Request" };
 const http_status Forbidden = { 403, "Forbidden" };
 const http_status NotFound = { 404, "Not Found" };
 const http_status MethodNotAllowed = { 405, "Method Not Allowed" };
+const http_status Locked = { 423, "Locked" };
 const http_status InternalServerError = { 500, "Internal server error" };
 
 } // namespace nx

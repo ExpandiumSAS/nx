@@ -6,6 +6,7 @@
 
 #include <string>
 #include <queue>
+#include <functional>
 
 #include <boost/asio.hpp>
 
@@ -21,9 +22,19 @@ namespace asio = boost::asio;
 /// @file
 ///
 /// sendfile() support
+using file_cb = std::function<void()>;
+
 struct file
 {
     std::string path;
+    file_cb cb;
+
+    void done()
+    {
+        if (cb) {
+            cb();
+        }
+    }
 };
 
 using file_queue = std::queue<file>;
@@ -42,13 +53,29 @@ struct file_state
     off_t total;
 };
 
+template <typename Callable>
+void send_file_done(
+    file_state fs,
+    const error_code& ec,
+    Callable cb,
+    off_t count
+)
+{
+    if (fs.fd != -1) {
+        ::close(fs.fd);
+    }
+
+    fs.f.done();
+    cb(ec, count);
+}
+
+
 template <typename Socket, typename Callable>
 void send_file_write(Socket& s, file_state fs, Callable cb)
 {
     if (fs.offset == fs.total) {
         // We're done
-        ::close(fs.fd);
-        cb(error_code(), fs.total);
+        send_file_done(fs, error_code(), cb, fs.total);
         return;
     }
 
@@ -73,8 +100,7 @@ void send_file_write(Socket& s, file_state fs, Callable cb)
                 }
             );
         } else {
-            ::close(fs.fd);
-            cb(ec, fs.offset);
+            send_file_done(fs, ec, cb, fs.offset);
         }
     } else {
         asio::async_write(
@@ -106,8 +132,8 @@ send_file(Socket& s, const file& f, Callable cb)
     if (fs.fd == -1) {
         auto ec = make_error_code();
 
-        s.postpone() << [&s,fs,cb,ec]() {
-            cb(ec, fs.total);
+        s.postpone() << [fs,cb,ec]() {
+            send_file_done(fs, ec, cb, fs.total);
         };
     } else {
         detail::send_file_write(s, fs, cb);

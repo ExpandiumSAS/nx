@@ -1,0 +1,13 @@
+= nx - Modern C++ HTTP library
+:doctype: book
+:source-highlighter: coderay
+:toc: left
+:toclevels: 4
+:icons: font
+:pdf-page-size: A4
+
+nx is a simple and modern C++ library allowing fast development of HTTP
+servers and clients in just a few lines of code.
+
+include::basic-examples.adoc[leveloffset=+1]
+include::overview.adoc[leveloffset=+1]
