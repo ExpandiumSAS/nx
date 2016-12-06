@@ -44,7 +44,7 @@ http_request::operator=(reply_cb cb)
 void
 http_request::start()
 {
-    if (sync) { 
+    if (sync_) { 
         sync_connect(ep_, std::move(req_), std::move(reply_cb_));
     } else {
         async_connect(ep_, std::move(req_), std::move(reply_cb_));

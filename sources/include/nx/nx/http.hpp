@@ -40,7 +40,7 @@ public:
     http& operator=(http&& other) = default;
 
     void process_request();
-    void process_reply();
+    bool process_reply();
     void send_request();
 
     using base_type::operator<<;
@@ -80,44 +80,41 @@ serve(http& h, const endpoint& ep, OnRequest&& cb)
 
 template <typename OnReply>
 http&
-async_connect(const endpoint& ep, request&& req, OnReply&& cb, bool sync)
+async_connect(const endpoint& ep, request&& req, OnReply&& cb)
 {
     auto p = new_object<http>(std::move(req), std::move(cb));
-    
     auto& h = *p;
-    cond_var cv;
 
-    h[tags::on_read] = [&cv,sync](http& t) {
+    h[tags::on_read] = [](http& t) {
         t.process_reply();
     };
 
-    auto result = connect(
+    return connect(
         h,
         ep,
         [](http& t) {
             t.send_request();
         }
     );
-
-    return result;
 }
 
 template <typename OnReply>
 http&
 sync_connect(const endpoint& ep, request&& req, OnReply&& cb)
 {
-    auto t = service::get().available_task();
+    auto t = std::make_shared<task>();
     auto p = new_object<http>(std::move(req), std::move(cb), t->get_io_service());
 
     auto& h = *p;
     cond_var cv;
 
-    h[tags::on_read] = [&cv,sync](http& t) {
-        t.process_reply();
-        cv.notify();
+    h[tags::on_read] = [&cv](http& t) {
+        if (t.process_reply()) {
+            cv.notify();    
+        }
     };
 
-    auto result = connect(
+    auto& result = connect(
         h,
         ep,
         [](http& t) {
@@ -126,7 +123,7 @@ sync_connect(const endpoint& ep, request&& req, OnReply&& cb)
     );
 
     cv.wait();
-    service::get().remove_task(t);
+    t->stop();
 
     return result;
 }

@@ -12,6 +12,7 @@
 #include <nx/config.h>
 #include <nx/object_base.hpp>
 #include <nx/handlers.hpp>
+#include <nx/task.hpp>
 
 namespace nx {
 

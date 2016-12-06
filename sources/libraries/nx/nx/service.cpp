@@ -148,10 +148,10 @@ service::available_task()
 
     task_ptr result;
     if (available_tasks_.empty()) {
-        auto result = std::make_shared<task>();
+        result = std::make_shared<task>();
         runnable_tasks_.insert(result->ptr());
     } else {
-        auto result = *(available_tasks_.begin());
+        result = std::dynamic_pointer_cast<task>(*(available_tasks_.begin()));
         available_tasks_.erase(result);
         runnable_tasks_.insert(result);
     }

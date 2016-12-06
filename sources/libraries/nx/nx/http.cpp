@@ -91,13 +91,13 @@ http::process_request()
     }
 }
 
-void
+bool
 http::process_reply()
 {
     try {
         if (!reply_parsed() || rbuf().size() < rep_.content_length()) {
             // Wait until response is complete
-            return;
+            return false;
         }
     } catch (const http_status& s) {
         rep_ << s;
@@ -108,6 +108,7 @@ http::process_reply()
     // All data arrived, call upper handler
     reply_cb_(rep_, rbuf());
     close();
+    return true;
 }
 
 void

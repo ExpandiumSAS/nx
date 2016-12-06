@@ -29,10 +29,13 @@ public:
       })
     {}
 
+    task(const task& ) = delete;
+    task& operator= (const task& ) = delete;
+
     asio::io_service& get_io_service()
     { return io_service_; }
 
-    const asio::io_service get_io_service() const
+    const asio::io_service& get_io_service() const
     { return io_service_; }
 
     virtual void stop() override
