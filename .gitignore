@@ -5,3 +5,4 @@ cmake
 CMakeLists.txt
 Makefile
 # CBUILD_GITIGNORE END
+.vscode

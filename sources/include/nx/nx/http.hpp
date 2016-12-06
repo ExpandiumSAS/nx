@@ -8,6 +8,7 @@
 #include <nx/request.hpp>
 #include <nx/reply.hpp>
 #include <nx/handlers.hpp>
+#include <nx/cond_var.hpp>
 
 namespace nx {
 
@@ -17,6 +18,9 @@ using request_cb = std::function<
 using reply_cb = std::function<
     void(reply& rep, buffer& data)
 >;
+
+struct http_async_tag {};
+struct http_sync_tag {};
 
 class NX_API http : public tcp_base<http>
 {
@@ -28,6 +32,7 @@ public:
 
     http() = default;
     http(request&& req, reply_cb&& cb);
+    http(request&& req, reply_cb&& cb, asio::io_service& io);
     http(reply&& rep, request_cb&& cb);
     http(const http& other) = delete;
     http(http&& other) = default;
@@ -35,7 +40,7 @@ public:
     http& operator=(http&& other) = default;
 
     void process_request();
-    void process_reply();
+    bool process_reply();
     void send_request();
 
     using base_type::operator<<;
@@ -72,9 +77,10 @@ serve(http& h, const endpoint& ep, OnRequest&& cb)
         );
 }
 
+
 template <typename OnReply>
 http&
-connect(const endpoint& ep, request&& req, OnReply&& cb)
+async_connect(const endpoint& ep, request&& req, OnReply&& cb)
 {
     auto p = new_object<http>(std::move(req), std::move(cb));
     auto& h = *p;
@@ -83,14 +89,43 @@ connect(const endpoint& ep, request&& req, OnReply&& cb)
         t.process_reply();
     };
 
-    return
-        connect(
-            h,
-            ep,
-            [](http& t) {
-                t.send_request();
-            }
-        );
+    return connect(
+        h,
+        ep,
+        [](http& t) {
+            t.send_request();
+        }
+    );
+}
+
+template <typename OnReply>
+http&
+sync_connect(const endpoint& ep, request&& req, OnReply&& cb)
+{
+    auto t = std::make_shared<task>();
+    auto p = new_object<http>(std::move(req), std::move(cb), t->get_io_service());
+
+    auto& h = *p;
+    cond_var cv;
+
+    h[tags::on_read] = [&cv](http& t) {
+        if (t.process_reply()) {
+            cv.notify();    
+        }
+    };
+
+    auto& result = connect(
+        h,
+        ep,
+        [](http& t) {
+            t.send_request();
+        }
+    );
+
+    cv.wait();
+    t->stop();
+
+    return result;
 }
 
 } // namespace nx

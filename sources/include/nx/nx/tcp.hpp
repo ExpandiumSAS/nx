@@ -28,6 +28,10 @@ public:
     using base_type::base_type;
 
     tcp_base() = default;
+    tcp_base(asio::io_service& io)
+    : base_type(io)
+    {}
+
     tcp_base(const tcp_base& other) = delete;
     tcp_base(tcp_base&& other) = default;
     tcp_base& operator=(const tcp_base& other) = delete;

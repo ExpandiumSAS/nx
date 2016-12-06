@@ -7,6 +7,12 @@ http::http(request&& req, reply_cb&& cb)
 reply_cb_(std::move(cb))
 {}
 
+http::http(request&& req, reply_cb&& cb, asio::io_service& io)
+: base_type(io),
+  req_(std::move(req)),
+  reply_cb_(std::move(cb))
+{}
+
 http::http(reply&& rep, request_cb&& cb)
 : rep_(std::move(rep)),
 request_cb_(std::move(cb))
@@ -85,13 +91,13 @@ http::process_request()
     }
 }
 
-void
+bool
 http::process_reply()
 {
     try {
         if (!reply_parsed() || rbuf().size() < rep_.content_length()) {
             // Wait until response is complete
-            return;
+            return false;
         }
     } catch (const http_status& s) {
         rep_ << s;
@@ -102,6 +108,7 @@ http::process_reply()
     // All data arrived, call upper handler
     reply_cb_(rep_, rbuf());
     close();
+    return true;
 }
 
 void

@@ -73,6 +73,10 @@ public:
     : socket_(service::get().io_service())
     {}
 
+    socket(asio::io_service& io)
+    : socket_(io)
+    {}
+
     socket(socket_type other_socket)
     : socket_(std::move(other_socket))
     {}
@@ -92,7 +96,7 @@ public:
     { return socket_; }
 
     virtual void start()
-    { base_type::postpone() << [this]() { read(); }; }
+    { base_type::postpone(socket_.get_io_service()) << [this]() { read(); }; }
 
     virtual void stop()
     { close(); }
@@ -204,7 +208,7 @@ protected:
         soft_stop_ = true;
 
         if (!closed_ && wcq_.empty()) {
-            base_type::postpone() << [this]() { close(); };
+            base_type::postpone(socket_.get_io_service()) << [this]() { close(); };
         }
     }
 
@@ -261,7 +265,7 @@ private:
                     base_type::handler(tags::on_read)(derived());
                 }
 
-                base_type::postpone() << [this]() { read(); };
+                base_type::postpone(socket_.get_io_service()) << [this]() { read(); };
             }
         );
     }
@@ -276,9 +280,9 @@ private:
 
         if (wcq_.empty()) {
             if (soft_stop_) {
-                base_type::postpone() << [this]() { stop(); };
+                base_type::postpone(socket_.get_io_service()) << [this]() { stop(); };
             } else {
-                base_type::postpone() << [this]() {
+                base_type::postpone(socket_.get_io_service()) << [this]() {
                     base_type::handler(tags::on_drain)(derived());
                 };
             }
@@ -339,7 +343,7 @@ private:
 
         locked([&]() { pop_queue(wcq_); pop_queue(q); });
 
-        base_type::postpone() << [this](){ write(); };
+        base_type::postpone(socket_.get_io_service()) << [this](){ write(); };
     }
 
     template <typename Queue>
