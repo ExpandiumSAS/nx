@@ -8,6 +8,7 @@
 #include <nx/request.hpp>
 #include <nx/reply.hpp>
 #include <nx/handlers.hpp>
+#include <nx/cond_var.hpp>
 
 namespace nx {
 
@@ -17,6 +18,9 @@ using request_cb = std::function<
 using reply_cb = std::function<
     void(reply& rep, buffer& data)
 >;
+
+struct http_async_tag {};
+struct http_sync_tag {};
 
 class NX_API http : public tcp_base<http>
 {
@@ -28,6 +32,7 @@ public:
 
     http() = default;
     http(request&& req, reply_cb&& cb);
+    http(request&& req, reply_cb&& cb, asio::io_service& io);
     http(reply&& rep, request_cb&& cb);
     http(const http& other) = delete;
     http(http&& other) = default;
@@ -72,25 +77,58 @@ serve(http& h, const endpoint& ep, OnRequest&& cb)
         );
 }
 
+
 template <typename OnReply>
 http&
-connect(const endpoint& ep, request&& req, OnReply&& cb)
+async_connect(const endpoint& ep, request&& req, OnReply&& cb, bool sync)
 {
     auto p = new_object<http>(std::move(req), std::move(cb));
+    
     auto& h = *p;
+    cond_var cv;
 
-    h[tags::on_read] = [](http& t) {
+    h[tags::on_read] = [&cv,sync](http& t) {
         t.process_reply();
     };
 
-    return
-        connect(
-            h,
-            ep,
-            [](http& t) {
-                t.send_request();
-            }
-        );
+    auto result = connect(
+        h,
+        ep,
+        [](http& t) {
+            t.send_request();
+        }
+    );
+
+    return result;
+}
+
+template <typename OnReply>
+http&
+sync_connect(const endpoint& ep, request&& req, OnReply&& cb)
+{
+    auto t = service::get().available_task();
+    auto p = new_object<http>(std::move(req), std::move(cb), t->get_io_service());
+
+    auto& h = *p;
+    cond_var cv;
+
+    h[tags::on_read] = [&cv,sync](http& t) {
+        t.process_reply();
+        cv.notify();
+    };
+
+    auto result = connect(
+        h,
+        ep,
+        [](http& t) {
+            t.send_request();
+        }
+    );
+
+    cv.wait();
+    service::get().remove_task(t);
+
+    return result;
 }
 
 } // namespace nx

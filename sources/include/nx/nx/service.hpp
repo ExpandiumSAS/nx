@@ -36,6 +36,9 @@ public:
 
     service& operator<<(void_cb&& cb);
 
+    task_ptr available_task();
+    void remove_task(task_ptr tptr);
+
 private:
     service(const service&) = delete;
     void operator=(const service&) = delete;
@@ -46,6 +49,10 @@ private:
 
     std::unordered_set<object_ptr> objects_;
     std::mutex objects_mutex_;
+
+    std::unordered_set<object_ptr> available_tasks_;
+    std::unordered_set<object_ptr> runnable_tasks_;
+    std::mutex tasks_mutex_;
 };
 
 NX_API

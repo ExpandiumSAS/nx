@@ -7,6 +7,12 @@ http::http(request&& req, reply_cb&& cb)
 reply_cb_(std::move(cb))
 {}
 
+http::http(request&& req, reply_cb&& cb, asio::io_service& io)
+: base_type(io),
+  req_(std::move(req)),
+  reply_cb_(std::move(cb))
+{}
+
 http::http(reply&& rep, request_cb&& cb)
 : rep_(std::move(rep)),
 request_cb_(std::move(cb))

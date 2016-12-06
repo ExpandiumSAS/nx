@@ -11,6 +11,7 @@ const std::string get_method = "GET";
 const std::string put_method = "PUT";
 const std::string post_method = "POST";
 const std::string delete_method = "DELETE";
+const std::string options_method = "OPTIONS";
 
 struct method
 {
@@ -21,6 +22,7 @@ const method GET = { get_method };
 const method PUT = { put_method };
 const method POST = { post_method };
 const method DELETE = { delete_method };
+const method OPTIONS = { options_method };
 
 } // namespace nx
 

@@ -15,7 +15,7 @@ namespace nx {
 class NX_API http_request
 {
 public:
-    http_request(const method& m, const endpoint& ep);
+    http_request(const method& m, const endpoint& ep, bool sync);
     http_request(const http_request& other) = delete;
     http_request(http_request&& other);
     virtual ~http_request();
@@ -37,12 +37,20 @@ public:
 private:
     void start();
 
+    bool sync_;
     request req_;
     endpoint ep_;
     reply_cb reply_cb_;
+    bool async_ = true;
 };
 
 class NX_API httpc
+{
+public:
+    http_request operator()(const method& m, const endpoint& ep);
+};
+
+class NX_API httpc_sync
 {
 public:
     http_request operator()(const method& m, const endpoint& ep);

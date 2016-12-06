@@ -73,6 +73,11 @@ public:
     : socket_(service::get().io_service())
     {}
 
+    socket(asio::io_service& io, bool sync)
+    : sync_(sync),
+      socket_(io)
+    {}
+
     socket(socket_type other_socket)
     : socket_(std::move(other_socket))
     {}
@@ -351,6 +356,7 @@ private:
     }
 
     socket_type socket_;
+    bool sync_ {false};
     buffer buf_;
     buffer rbuf_;
     std::atomic_bool writing_{ false };
