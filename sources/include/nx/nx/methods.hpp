@@ -7,6 +7,9 @@
 
 namespace nx {
 
+/**
+ HTTP Method
+ */
 const std::string get_method = "GET";
 const std::string put_method = "PUT";
 const std::string post_method = "POST";

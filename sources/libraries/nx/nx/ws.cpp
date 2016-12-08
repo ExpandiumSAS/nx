@@ -17,8 +17,12 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
 void
-ws::finish(int code)
-{}
+ws::finish(uint16_t code)
+{
+    send_close_frame(code);
+    finish_cb_(ctx_);
+    close();
+}
 
 bool
 ws::request_parsed()
@@ -133,7 +137,26 @@ ws::process_frames()
     ws_frame f;
 
     while (parse_frame(f)) {
+        switch(f.opcode) {
+            case WS_OP_CONTINUATION_FRAME:
+                // TODO continuation frame
+            break;
 
+            case WS_OP_PING:
+                send_ping_pong_frame(false);
+            break;
+
+            case WS_OP_TEXT_FRAME:
+            case WS_OP_BINARY_FRAME:
+                message_cb_(ctx_, f.payload);
+            break;
+
+            case WS_OP_CLOSE: {
+                uint16_t code = ((uint16_t)f.payload[0] << 8) | (f.payload[1] & 0xFF); 
+                finish(code);
+            }
+            break;
+        }
     }
 }
 
@@ -156,6 +179,7 @@ ws::process_request()
     }
 
     // TOFIX: *this << rep_.content();
+    connect_cb_(ctx_);
 
     // From now on, process websocket frames
     (*this)[tags::on_read] = [](ws& w) { w.process_frames(); };
@@ -243,6 +267,27 @@ ws::send_request()
         ;
 
     // TOFIX: *this << req_.content();
+}
+
+void 
+ws::send_close_frame(uint16_t code)
+{
+    buffer frame(4);
+    frame[0] = 0b10001000;
+    frame[1] = 2;
+    frame[2] = (uint8_t)(code >> 8) & 0xFF;
+    frame[3] = (uint8_t)(code & 0xFF);
+    (*this) << std::move(frame);
+}
+
+
+void 
+ws::send_ping_pong_frame(bool ping)
+{
+    buffer frame(2);
+    frame[0] = (ping) ? 0b10001001 : 0b10001010;
+    frame[1] = 0;
+    (*this) << std::move(frame);
 }
 
 } // namespace nx

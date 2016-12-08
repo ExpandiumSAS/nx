@@ -83,8 +83,21 @@ public:
 
     socket(const socket& other) = delete;
     socket(socket&& other) = default;
+
+    template<typename OtherDerived>
+    socket(socket<OtherDerived,Socket, Callbacks...>&& other)
+    : socket_(std::move(other.socket_))
+    {}
+
     socket& operator=(const socket& other) = delete;
     socket& operator=(socket&& other) = default;
+    
+    template<typename OtherDerived>
+    socket& operator=(socket<OtherDerived, Socket, Callbacks...>&& other)
+    {
+        socket_ = std::move(other.socket_);
+        return *this;
+    }
 
     virtual ~socket()
     {}
