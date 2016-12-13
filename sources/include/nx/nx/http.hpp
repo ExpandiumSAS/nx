@@ -9,6 +9,7 @@
 #include <nx/reply.hpp>
 #include <nx/handlers.hpp>
 #include <nx/cond_var.hpp>
+#include <nx/ws.hpp>
 
 namespace nx {
 
@@ -47,6 +48,15 @@ public:
 
     http& operator<<(request_cb cb);
     http& operator<<(reply_cb cb);
+
+    template<typename SocketType>
+    SocketType& upgrade_connection()
+    {
+        auto upg_ct = new_object<SocketType>(sock());
+        auto& upg = *upg_ct;
+
+        return upg;
+    }
 
 private:
     bool request_parsed();

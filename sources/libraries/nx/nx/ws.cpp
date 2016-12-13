@@ -17,6 +17,12 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
 void
+ws::start()
+{
+    (*this)[tags::on_read] = [](ws& w) { w.process_frames(); };
+}
+
+void
 ws::finish(uint16_t code)
 {
     send_close_frame(code);
@@ -24,25 +30,6 @@ ws::finish(uint16_t code)
     close();
 }
 
-bool
-ws::request_parsed()
-{
-    if (!parsed_) {
-        parsed_ = req_.parse(rbuf());
-    }
-
-    return parsed_;
-}
-
-bool
-ws::reply_parsed()
-{
-    if (!parsed_) {
-        parsed_ = rep_.parse(rbuf());
-    }
-
-    return parsed_;
-}
 
 bool
 ws::parse_frame(ws_frame& f)
@@ -160,114 +147,34 @@ ws::process_frames()
     }
 }
 
-void
-ws::process_request()
-{
-    try {
-        if (!request_parsed()) {
-            // Wait until request is complete
-            return;
-        }
 
-        // Request complete, perform handshake
-        server_handshake();
-    } catch (const http_status& s) {
-        rep_ << s;
-    } catch (const std::exception& e) {
-        std::cout << "BadRequest by " << e.what() << std::endl;
-        rep_ << BadRequest(e);
-    }
+// void
+// ws::send_request()
+// {
+//     std::random_device rd;
+//     std::mt19937 gen(rd());
+//     std::uniform_int_distribution<uint8_t> dist(0, 9);
+//     std::vector<uint8_t> buffer(16);
 
-    // TOFIX: *this << rep_.content();
-    connect_cb_(ctx_);
+//     std::generate(
+//         buffer.begin(), buffer.end(),
+//         [&]() { return dist(gen); }
+//     );
 
-    // From now on, process websocket frames
-    (*this)[tags::on_read] = [](ws& w) { w.process_frames(); };
-}
+//     std::string key;
 
-std::string
-ws::server_challenge() const
-{
-    nx::SHA1 s;
+//     bn::encode_b64(buffer.begin(), buffer.end(), std::back_inserter(key));
 
-    s.update(req_.h(Sec_WebSocket_Key));
-    std::string csum = s.final() + ws_guid;
+//     req_
+//         << header("Host", local_str())
+//         << upgrade_websocket
+//         << connection_upgrade
+//         << header{ Sec_WebSocket_Key, key }
+//         ;
 
-    std::string c;
-
-    bn::encode_b64(csum.begin(), csum.end(), std::back_inserter(c));
-
-    return c;
-}
-
-void
-ws::server_handshake()
-{
-    bool valid_request =
-        req_ == GET
-        &&
-        req_.has(upgrade_websocket)
-        &&
-        req_.has(connection_upgrade)
-        &&
-        req_.has(Sec_WebSocket_Key)
-        &&
-        req_.has(Sec_WebSocket_Version)
-        ;
-
-    if (!valid_request) {
-        throw BadRequest;
-    }
-
-    rep_
-        << SwitchingProtocols
-        << upgrade_websocket
-        << connection_upgrade
-        << header{ Sec_WebSocket_Accept, server_challenge() }
-        ;
-}
-
-void
-ws::process_reply()
-{
-    try {
-        if (!reply_parsed()) {
-            // Wait until response is complete
-            return;
-        }
-    } catch (const http_status& s) {
-        rep_ << s;
-    } catch (const std::exception& e) {
-        rep_ << BadResponse(e);
-    }
-}
-
-void
-ws::send_request()
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 9);
-    std::vector<uint8_t> buffer(16);
-
-    std::generate(
-        buffer.begin(), buffer.end(),
-        [&]() { return dist(gen); }
-    );
-
-    std::string key;
-
-    bn::encode_b64(buffer.begin(), buffer.end(), std::back_inserter(key));
-
-    req_
-        << header("Host", local_str())
-        << upgrade_websocket
-        << connection_upgrade
-        << header{ Sec_WebSocket_Key, key }
-        ;
-
-    // TOFIX: *this << req_.content();
-}
+//     // TOFIX: *this << req_.content();
+//     *this << std::move(req_);
+// }
 
 void 
 ws::send_close_frame(uint16_t code)
@@ -288,6 +195,48 @@ ws::send_ping_pong_frame(bool ping)
     frame[0] = (ping) ? 0b10001001 : 0b10001010;
     frame[1] = 0;
     (*this) << std::move(frame);
+}
+
+std::string
+ws::server_challenge(const request& req)
+{
+    nx::SHA1 s;
+
+    s.update(req.h(Sec_WebSocket_Key));
+    std::string csum = s.final() + ws_guid;
+
+    std::string c;
+
+    bn::encode_b64(csum.begin(), csum.end(), std::back_inserter(c));
+
+    return c;
+}
+
+void
+ws::server_handshake(const request& req, reply& rep)
+{
+    bool valid_request =
+        req == GET
+        &&
+        req.has(upgrade_websocket)
+        &&
+        req.has(connection_upgrade)
+        &&
+        req.has(Sec_WebSocket_Key)
+        &&
+        req.has(Sec_WebSocket_Version)
+        ;
+
+    if (!valid_request) {
+        throw BadRequest;
+    }
+
+    rep
+        << SwitchingProtocols
+        << upgrade_websocket
+        << connection_upgrade
+        << header{ Sec_WebSocket_Accept, server_challenge(req) }
+        ;
 }
 
 } // namespace nx

@@ -9,7 +9,8 @@ namespace nx {
 
 reply::reply()
 : status_(OK),
-postponed_(false)
+postponed_(false),
+upgraded_(false)
 {}
 
 reply::reply(reply&& other)
@@ -25,6 +26,7 @@ reply::operator=(reply&& other)
     status_ = std::move(other.status_);
 
     postponed_ = other.postponed_;
+    upgraded_ = other.upgraded_;
     done_cbs_ = std::move(other.done_cbs_);
 
     minor_version_ = other.minor_version_;
@@ -106,6 +108,14 @@ reply::postpone()
 bool
 reply::postponed()
 { return postponed_; }
+
+void 
+reply::upgrade()
+{ upgraded_ = true; }
+
+bool
+reply::upgraded()
+{ return upgraded_; }
 
 void
 reply::done()

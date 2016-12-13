@@ -12,16 +12,6 @@
 
 namespace nx {
 
-using ws_connect_cb = std::function<
-    void(context&)
->;
-using ws_message_cb = std::function<
-    void(context&, buffer& data)
->;
-using ws_finish_cb = std::function<
-    void(context&)
->;
-
 struct NX_API ws_frame
 {
     bool fin;
@@ -50,27 +40,29 @@ public:
     : ctx_{*this}
     {}
 
+    template<typename OtherSocket>
+    ws(OtherSocket&& sock)
+    : base_type(std::move(sock)),
+      ctx_{*this}
+    {}
+
+    void start();
+
     bool parse_frame(ws_frame& f);
     void process_frames();
-    void process_request();
-    void process_reply();
     void send_request();
 
+    static void server_handshake(const request& req, reply& rep);
 private:
     void finish(uint16_t code);
-    bool request_parsed();
-    bool reply_parsed();
 
-    std::string server_challenge() const;
-    void server_handshake();
+    static std::string server_challenge(const request& req);
     void client_handshake();
 
     void send_close_frame(uint16_t code);
     void send_ping_pong_frame(bool ping);
 
     bool parsed_ = false;
-    request req_;
-    reply rep_;
     context ctx_;
 
     ws_connect_cb   connect_cb_;

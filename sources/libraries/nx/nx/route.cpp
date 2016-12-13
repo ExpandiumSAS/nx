@@ -35,6 +35,15 @@ route::operator=(route_cb cb)
     return *this;
 }
 
+route&
+route::operator=(ws_connection ct)
+{
+    ws_hook_ = true;
+    ct_ = ct;
+
+    return *this;
+}
+
 const std::string&
 route::path() const
 { return path_; }
