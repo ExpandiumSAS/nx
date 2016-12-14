@@ -19,14 +19,22 @@ const std::size_t ws_max_len = 10 * 1024 * 1024;
 void
 ws::start()
 {
-    (*this)[tags::on_read] = [](ws& w) { w.process_frames(); };
+    (*this)[tags::on_read] = [](ws& w) { 
+        w.process_frames(); 
+    };
+    base_type::start();
+    if (connect_cb_) {
+        connect_cb_(ctx_);
+    } 
 }
 
 void
 ws::finish(uint16_t code)
 {
     send_close_frame(code);
-    finish_cb_(ctx_);
+    if (finish_cb_) {
+        finish_cb_(ctx_);
+    }
     close();
 }
 
@@ -56,7 +64,7 @@ ws::parse_frame(ws_frame& f)
     std::size_t len = (second & 0b01111111);
 
     if (len < 126) {
-        std::cout << "small payload: " << len << std::endl;
+        hlen = 2;
     } else if (len == 126) {
         if (b.size() <= 4) {
             // Not enough header data
@@ -102,9 +110,9 @@ ws::parse_frame(ws_frame& f)
     // Payload
     if (masked) {
         // Extract mask
-        uint32_t mask = be32toh(*((uint32_t*) b.data()));
+        uint32_t mask = le32toh(*((uint32_t*) b.data()));
         auto mask_data = (uint8_t*) &mask;
-        b.erase(b.begin(), b.begin() + 2);
+        b.erase(b.begin(), b.begin() + 4);
 
         f.payload.resize(b.size());
 
@@ -115,6 +123,7 @@ ws::parse_frame(ws_frame& f)
         f.payload << b;
     }
 
+    b.clear();
     return true;
 }
 
@@ -136,6 +145,7 @@ ws::process_frames()
             case WS_OP_TEXT_FRAME:
             case WS_OP_BINARY_FRAME:
                 message_cb_(ctx_, f.payload);
+                ctx_.done();
             break;
 
             case WS_OP_CLOSE: {
@@ -175,6 +185,14 @@ ws::process_frames()
 //     // TOFIX: *this << req_.content();
 //     *this << std::move(req_);
 // }
+
+void
+ws::set_callbacks(const ws_connection& w)
+{
+    connect_cb_ = w.connect_cb;
+    message_cb_ = w.message_cb;
+    finish_cb_ = w.finish_cb;
+}
 
 void 
 ws::send_close_frame(uint16_t code)

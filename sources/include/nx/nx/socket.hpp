@@ -268,7 +268,6 @@ private:
     void read()
     {
         std::lock_guard<std::mutex> lock(m_);
-        std::cout << "socket::read: 0x" << std::hex << (uint64_t)this<<std::endl;
 
         if (stop_ || closed_ || cancel_) {
             return;

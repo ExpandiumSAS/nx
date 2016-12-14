@@ -41,7 +41,6 @@ route::operator=(ws_connection ct)
     ws_hook_ = true;
     ct_ = ct;
 
-    std::cout << "Update connection for WS" << std::endl;
     return *this;
 }
 
@@ -92,7 +91,12 @@ route::match(request& req) const
 
 void
 route::operator()(const request& req, buffer& data, reply& rep) const
-{ route_cb_(req, data, rep); }
+{
+    if (ws_hook_) {
+        rep << ct_;
+    } 
+    route_cb_(req, data, rep); 
+}
 
 void
 route::clean_path()

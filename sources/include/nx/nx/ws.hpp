@@ -10,8 +10,14 @@
 #include <nx/buffer.hpp>
 #include <nx/context.hpp>
 
-namespace nx
-{
+namespace nx {
+
+const uint8_t WS_OP_CONTINUATION_FRAME = 0x0;
+const uint8_t WS_OP_TEXT_FRAME = 0x1;
+const uint8_t WS_OP_BINARY_FRAME = 0x2;
+const uint8_t WS_OP_CLOSE = 0x8;
+const uint8_t WS_OP_PING = 0x9;
+const uint8_t WS_OP_PONG = 0xA;
 
 struct NX_API ws_frame
 {
@@ -22,13 +28,6 @@ struct NX_API ws_frame
     uint8_t opcode;
     buffer payload;
 };
-
-const uint8_t WS_OP_CONTINUATION_FRAME = 0x0;
-const uint8_t WS_OP_TEXT_FRAME = 0x1;
-const uint8_t WS_OP_BINARY_FRAME = 0x2;
-const uint8_t WS_OP_CLOSE = 0x8;
-const uint8_t WS_OP_PING = 0x9;
-const uint8_t WS_OP_PONG = 0xA;
 
 class NX_API ws
     : public tcp_base<ws>
@@ -54,6 +53,8 @@ class NX_API ws
     bool parse_frame(ws_frame &f);
     void process_frames();
     void send_request();
+
+    void set_callbacks(const ws_connection& w);
 
     static void server_handshake(const request &req, reply &rep);
     static std::string server_challenge(const request &req);

@@ -9,7 +9,7 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
     auto size = data.size();
     buffer frame(10);
 
-    frame[0] = (binary) ? 0b10000010 : 0x10000001;
+    frame[0] = (binary) ? 0b10000010 : 0b10000001;
     if (size < 126) {
         frame[1] = (uint8_t)size;
         frame.resize(2);
@@ -39,20 +39,26 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
 context& 
 context::operator<< (const buffer& data)
 {
-    buffer f;
-    encode_frame_data(f, true, data);
-    w_ << std::move(f);
+    type_ = BINARY;
+    data_ << data;
     return *this;
 }
 
 context& 
 context::operator<< (const std::string& text)
 {
-    buffer f, data;
-    data << text;
-    encode_frame_data(f, false, data);
-    w_ << std::move(f);
+    type_ = TEXT;
+    data_ << text;
     return *this;
+}
+
+void 
+context::done()
+{
+    buffer f;
+    encode_frame_data(f, type_ == BINARY, data_);
+    w_ << std::move(f);
+    data_.clear();
 }
 
 }   // namespace nx

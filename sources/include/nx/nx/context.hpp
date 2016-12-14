@@ -12,7 +12,8 @@ namespace nx {
 class ws;
 
 /// WS contextual class
-struct NX_API context {
+class NX_API context {
+public:
     context(ws& w)
     : w_(w)
     {}
@@ -20,7 +21,17 @@ struct NX_API context {
     context& operator<< (const buffer& data);
     context& operator<< (const std::string& text);
 
+    void done();
+    
+private:
+    enum frame_type {
+        BINARY = 0,
+        TEXT = 1
+    };
+private:
     ws& w_;
+    buffer data_;
+    frame_type type_{ TEXT };
 };
 
 /// WS Connection Callback 
