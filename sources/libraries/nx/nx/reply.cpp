@@ -9,7 +9,8 @@ namespace nx {
 
 reply::reply()
 : status_(OK),
-postponed_(false)
+postponed_(false),
+upgraded_(false)
 {}
 
 reply::reply(reply&& other)
@@ -25,6 +26,7 @@ reply::operator=(reply&& other)
     status_ = std::move(other.status_);
 
     postponed_ = other.postponed_;
+    upgraded_ = other.upgraded_;
     done_cbs_ = std::move(other.done_cbs_);
 
     minor_version_ = other.minor_version_;
@@ -76,6 +78,10 @@ const http_status&
 reply::code() const
 { return status_; }
 
+const ws_connection& 
+reply::websocket_callback() const
+{ return ws_connection_; }
+
 bool
 reply::is_error() const
 { return status_.is_error(); }
@@ -106,6 +112,14 @@ reply::postpone()
 bool
 reply::postponed()
 { return postponed_; }
+
+void 
+reply::upgrade()
+{ upgraded_ = true; }
+
+bool
+reply::upgraded()
+{ return upgraded_; }
 
 void
 reply::done()
@@ -147,6 +161,13 @@ reply::operator<<(const http_status& s)
     status_ = s;
     handle_error();
 
+    return *this;
+}
+
+reply& 
+reply::operator<<(const ws_connection& w)
+{
+    ws_connection_ = w;
     return *this;
 }
 

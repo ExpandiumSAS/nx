@@ -254,7 +254,7 @@ void encode_b32(Iter1 start, Iter1 end, Iter2 out)
 template<class Iter1, class Iter2>
 void encode_b64(Iter1 start, Iter1 end, Iter2 out)
 {
-    encode<b64_conversion_traits>(start, end, out);
+    // encode<b64_conversion_traits>(start, end, out);
 }
 
 template<class Iter1, class Iter2>

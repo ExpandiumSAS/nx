@@ -69,20 +69,38 @@ http::process_request()
                 req_ << attributes(body, '&');
             }
 
-            rep_ << connection_close;
-
-            // Register callback to be called when reply is ready to send
-            // (will be called last by rep.done())
-            auto self = ptr();
-
-            rep_ | [this,self]() mutable {
-                *this << rep_;
-                close_after_write();
-                self.reset();
-            };
-
             // All data arrived, call upper handler
             request_cb_(req_, rbuf(), rep_);
+
+            
+            auto self = ptr();
+            if (rep_.upgraded()) {
+                ws::server_handshake(req_, rep_);
+
+                rep_ | [this,self]() mutable {
+                    *this << rep_;
+
+                    async() << [this,self]() {
+                        this->cancel();
+                        
+                        auto& w = this->upgrade_connection<ws>();
+                        w.set_callbacks(rep_.websocket_callback());
+
+                        this->dispose();
+                        w.start();
+                    };
+                };
+            } else {
+                // Register callback to be called when reply is ready to send
+                // (will be called last by rep.done())
+                rep_ << connection_close;
+
+                rep_ | [this,self]() mutable {
+                    *this << rep_;
+                    close_after_write();
+                    self.reset();
+                };
+            }
         }
     );
 

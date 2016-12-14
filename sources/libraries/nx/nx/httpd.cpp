@@ -14,6 +14,20 @@ httpd::operator()(const method& m)
     return r.back();
 }
 
+route&
+httpd::operator()(const ws_tag& t)
+{
+    auto& r = routes_map_["GET"];
+
+    r.emplace_back();
+
+    r.back() = [](const request& req, buffer& data, reply& rep) {
+        rep.upgrade();
+    };
+
+    return r.back();
+}
+
 endpoint
 httpd::operator()(const endpoint& ep)
 {

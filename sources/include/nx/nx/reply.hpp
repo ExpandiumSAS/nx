@@ -9,6 +9,7 @@
 #include <nx/picohttpparser.h>
 
 #include <nx/config.h>
+#include <nx/context.hpp>
 #include <nx/http_msg.hpp>
 #include <nx/http_status.hpp>
 #include <nx/handlers.hpp>
@@ -32,9 +33,13 @@ public:
 
     const http_status& code() const;
     bool is_error() const;
+    const ws_connection& websocket_callback() const;
 
     void postpone();
     bool postponed();
+
+    void upgrade();
+    bool upgraded();
 
     void done();
 
@@ -46,6 +51,8 @@ public:
     reply& operator<<(const http_status& s);
     reply& operator<<(const std::exception& e);
 
+    reply& operator<<(const ws_connection& w);
+
     using http_msg::operator<<;
 
 private:
@@ -53,7 +60,9 @@ private:
 
     http_status status_;
     bool postponed_;
+    bool upgraded_;
     void_cbs done_cbs_;
+    ws_connection ws_connection_;
 
     int minor_version_;
     int raw_status_;

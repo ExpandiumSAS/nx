@@ -15,6 +15,7 @@ class NX_API httpd
 {
 public:
     route& operator()(const method& m);
+    route& operator()(const ws_tag& m);
 
     endpoint operator()(const endpoint& ep);
 

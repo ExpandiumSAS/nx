@@ -10,6 +10,7 @@
 #include <nx/config.h>
 #include <nx/request.hpp>
 #include <nx/reply.hpp>
+#include <nx/context.hpp>
 
 namespace nx {
 
@@ -23,6 +24,7 @@ public:
     route& operator/(const char* path);
     route& operator/(const std::string& path);
     route& operator=(route_cb cb);
+    route& operator=(ws_connection ct);
 
     const std::string& path() const;
 
@@ -30,11 +32,17 @@ public:
 
     void operator()(const request& req, buffer& data, reply& rep) const;
 
+    bool ws_hook() const
+    { return ws_hook_; }
+
 private:
     void clean_path();
 
     std::string path_;
     route_cb route_cb_;
+
+    bool ws_hook_ = false;
+    ws_connection ct_;
 };
 
 using routes = std::vector<route>;

@@ -35,6 +35,15 @@ route::operator=(route_cb cb)
     return *this;
 }
 
+route&
+route::operator=(ws_connection ct)
+{
+    ws_hook_ = true;
+    ct_ = ct;
+
+    return *this;
+}
+
 const std::string&
 route::path() const
 { return path_; }
@@ -82,7 +91,12 @@ route::match(request& req) const
 
 void
 route::operator()(const request& req, buffer& data, reply& rep) const
-{ route_cb_(req, data, rep); }
+{
+    if (ws_hook_) {
+        rep << ct_;
+    } 
+    route_cb_(req, data, rep); 
+}
 
 void
 route::clean_path()

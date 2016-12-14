@@ -6,7 +6,7 @@
 
 #include <nx/ws.hpp>
 #include <nx/sha1.hpp>
-#include <nx/basen.hpp>
+#include <nx/base64.hpp>
 #include <nx/endian.hpp>
 
 namespace nx {
@@ -17,28 +17,27 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
 void
-ws::finish(int code)
-{}
-
-bool
-ws::request_parsed()
+ws::start()
 {
-    if (!parsed_) {
-        parsed_ = req_.parse(rbuf());
-    }
-
-    return parsed_;
+    (*this)[tags::on_read] = [](ws& w) { 
+        w.process_frames(); 
+    };
+    base_type::start();
+    if (connect_cb_) {
+        connect_cb_(ctx_);
+    } 
 }
 
-bool
-ws::reply_parsed()
+void
+ws::finish(uint16_t code)
 {
-    if (!parsed_) {
-        parsed_ = rep_.parse(rbuf());
+    send_close_frame(code);
+    if (finish_cb_) {
+        finish_cb_(ctx_);
     }
-
-    return parsed_;
+    close();
 }
+
 
 bool
 ws::parse_frame(ws_frame& f)
@@ -65,7 +64,7 @@ ws::parse_frame(ws_frame& f)
     std::size_t len = (second & 0b01111111);
 
     if (len < 126) {
-        std::cout << "small payload: " << len << std::endl;
+        hlen = 2;
     } else if (len == 126) {
         if (b.size() <= 4) {
             // Not enough header data
@@ -111,9 +110,9 @@ ws::parse_frame(ws_frame& f)
     // Payload
     if (masked) {
         // Extract mask
-        uint32_t mask = be32toh(*((uint32_t*) b.data()));
+        uint32_t mask = le32toh(*((uint32_t*) b.data()));
         auto mask_data = (uint8_t*) &mask;
-        b.erase(b.begin(), b.begin() + 2);
+        b.erase(b.begin(), b.begin() + 4);
 
         f.payload.resize(b.size());
 
@@ -124,6 +123,7 @@ ws::parse_frame(ws_frame& f)
         f.payload << b;
     }
 
+    b.clear();
     return true;
 }
 
@@ -133,116 +133,127 @@ ws::process_frames()
     ws_frame f;
 
     while (parse_frame(f)) {
+        switch(f.opcode) {
+            case WS_OP_CONTINUATION_FRAME:
+                // TODO continuation frame
+            break;
 
+            case WS_OP_PING:
+                send_ping_pong_frame(false);
+            break;
+
+            case WS_OP_TEXT_FRAME:
+            case WS_OP_BINARY_FRAME:
+                message_cb_(ctx_, f.payload);
+                ctx_.done();
+            break;
+
+            case WS_OP_CLOSE: {
+                uint16_t code = ((uint16_t)f.payload[0] << 8) | (f.payload[1] & 0xFF); 
+                finish(code);
+            }
+            break;
+        }
     }
 }
 
+
+// void
+// ws::send_request()
+// {
+//     std::random_device rd;
+//     std::mt19937 gen(rd());
+//     std::uniform_int_distribution<uint8_t> dist(0, 9);
+//     std::vector<uint8_t> buffer(16);
+
+//     std::generate(
+//         buffer.begin(), buffer.end(),
+//         [&]() { return dist(gen); }
+//     );
+
+//     std::string key;
+
+//     bn::encode_b64(buffer.begin(), buffer.end(), std::back_inserter(key));
+
+//     req_
+//         << header("Host", local_str())
+//         << upgrade_websocket
+//         << connection_upgrade
+//         << header{ Sec_WebSocket_Key, key }
+//         ;
+
+//     // TOFIX: *this << req_.content();
+//     *this << std::move(req_);
+// }
+
 void
-ws::process_request()
+ws::set_callbacks(const ws_connection& w)
 {
-    try {
-        if (!request_parsed()) {
-            // Wait until request is complete
-            return;
-        }
+    connect_cb_ = w.connect_cb;
+    message_cb_ = w.message_cb;
+    finish_cb_ = w.finish_cb;
+}
 
-        // Request complete, perform handshake
-        server_handshake();
-    } catch (const http_status& s) {
-        rep_ << s;
-    } catch (const std::exception& e) {
-        std::cout << "BadRequest by " << e.what() << std::endl;
-        rep_ << BadRequest(e);
-    }
+void 
+ws::send_close_frame(uint16_t code)
+{
+    buffer frame(4);
+    frame[0] = 0b10001000;
+    frame[1] = 2;
+    frame[2] = (uint8_t)(code >> 8) & 0xFF;
+    frame[3] = (uint8_t)(code & 0xFF);
+    (*this) << std::move(frame);
+}
 
-    // TOFIX: *this << rep_.content();
 
-    // From now on, process websocket frames
-    (*this)[tags::on_read] = [](ws& w) { w.process_frames(); };
+void 
+ws::send_ping_pong_frame(bool ping)
+{
+    buffer frame(2);
+    frame[0] = (ping) ? 0b10001001 : 0b10001010;
+    frame[1] = 0;
+    (*this) << std::move(frame);
 }
 
 std::string
-ws::server_challenge() const
+ws::server_challenge(const request& req)
 {
     nx::SHA1 s;
 
-    s.update(req_.h(Sec_WebSocket_Key));
-    std::string csum = s.final() + ws_guid;
+    std::string csum = req.h(Sec_WebSocket_Key) + ws_guid;
+    s.update(csum);
 
-    std::string c;
+    auto chash = s.digest();
+    std::string challenge = base64::encode(chash.begin(), chash.end());
 
-    bn::encode_b64(csum.begin(), csum.end(), std::back_inserter(c));
-
-    return c;
+    return challenge;
 }
 
 void
-ws::server_handshake()
+ws::server_handshake(const request& req, reply& rep)
 {
     bool valid_request =
-        req_ == GET
+        req == GET
         &&
-        req_.has(upgrade_websocket)
+        req.has(upgrade_websocket)
         &&
-        req_.has(connection_upgrade)
+        req.has(connection_upgrade)
         &&
-        req_.has(Sec_WebSocket_Key)
+        req.has(Sec_WebSocket_Key)
         &&
-        req_.has(Sec_WebSocket_Version)
+        req.has(Sec_WebSocket_Version)
         ;
 
     if (!valid_request) {
         throw BadRequest;
     }
 
-    rep_
+    rep
         << SwitchingProtocols
         << upgrade_websocket
         << connection_upgrade
-        << header{ Sec_WebSocket_Accept, server_challenge() }
+        << header{ Sec_WebSocket_Accept, server_challenge(req) }
         ;
-}
-
-void
-ws::process_reply()
-{
-    try {
-        if (!reply_parsed()) {
-            // Wait until response is complete
-            return;
-        }
-    } catch (const http_status& s) {
-        rep_ << s;
-    } catch (const std::exception& e) {
-        rep_ << BadResponse(e);
-    }
-}
-
-void
-ws::send_request()
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 9);
-    std::vector<uint8_t> buffer(16);
-
-    std::generate(
-        buffer.begin(), buffer.end(),
-        [&]() { return dist(gen); }
-    );
-
-    std::string key;
-
-    bn::encode_b64(buffer.begin(), buffer.end(), std::back_inserter(key));
-
-    req_
-        << header("Host", local_str())
-        << upgrade_websocket
-        << connection_upgrade
-        << header{ Sec_WebSocket_Key, key }
-        ;
-
-    // TOFIX: *this << req_.content();
 }
 
 } // namespace nx
