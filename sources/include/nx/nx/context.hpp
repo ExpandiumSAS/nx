@@ -11,6 +11,17 @@ namespace nx {
 /// Forwzard declaration
 class ws;
 
+const uint8_t text_frame_type = 0;
+const uint8_t binary_frame_type = 1;
+
+struct frame_type {
+    const uint8_t value;
+};
+
+const frame_type ws_text = { text_frame_type };
+const frame_type ws_binary = { binary_frame_type };
+const frame_type ws_json = { text_frame_type };
+
 /// WS contextual class
 class NX_API context {
 public:
@@ -18,20 +29,16 @@ public:
     : w_(w)
     {}
 
+    context& operator<< (const frame_type& );
     context& operator<< (const buffer& data);
     context& operator<< (const std::string& text);
 
     void done();
     
 private:
-    enum frame_type {
-        BINARY = 0,
-        TEXT = 1
-    };
-private:
     ws& w_;
     buffer data_;
-    frame_type type_{ TEXT };
+    uint8_t type_{ text_frame_type };
 };
 
 /// WS Connection Callback 

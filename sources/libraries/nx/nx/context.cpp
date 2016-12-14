@@ -35,11 +35,16 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
     b << data;
 }
 
+context& 
+context::operator<< (const frame_type& type)
+{
+    type_ = type.value;
+    return *this;
+}
 
 context& 
 context::operator<< (const buffer& data)
-{
-    type_ = BINARY;
+{   
     data_ << data;
     return *this;
 }
@@ -47,7 +52,6 @@ context::operator<< (const buffer& data)
 context& 
 context::operator<< (const std::string& text)
 {
-    type_ = TEXT;
     data_ << text;
     return *this;
 }
@@ -56,7 +60,7 @@ void
 context::done()
 {
     buffer f;
-    encode_frame_data(f, type_ == BINARY, data_);
+    encode_frame_data(f, type_ == binary_frame_type, data_);
     w_ << std::move(f);
     data_.clear();
 }
