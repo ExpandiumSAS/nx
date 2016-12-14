@@ -76,13 +76,16 @@ http::process_request()
             auto self = ptr();
             if (rep_.upgraded()) {
                 ws::server_handshake(req_, rep_);
+                std::cout << "Upgraded connection" << std::endl;
 
                 rep_ | [this,self]() mutable {
                     *this << rep_;
-                    self.reset();
 
                     async() << [this,self]() {
+                        std::cout << "Create WS Connection" << std::endl;
+                        this->cancel();
                         auto& w = this->upgrade_connection<ws>();
+                        this->dispose();
                         w.start();
                     };
                 };

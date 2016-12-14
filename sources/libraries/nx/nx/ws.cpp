@@ -6,7 +6,7 @@
 
 #include <nx/ws.hpp>
 #include <nx/sha1.hpp>
-#include <nx/basen.hpp>
+#include <nx/base64.hpp>
 #include <nx/endian.hpp>
 
 namespace nx {
@@ -202,14 +202,13 @@ ws::server_challenge(const request& req)
 {
     nx::SHA1 s;
 
-    s.update(req.h(Sec_WebSocket_Key));
-    std::string csum = s.final() + ws_guid;
+    std::string csum = req.h(Sec_WebSocket_Key) + ws_guid;
+    s.update(csum);
 
-    std::string c;
+    auto chash = s.digest();
+    std::string challenge = base64::encode(chash.begin(), chash.end());
 
-    bn::encode_b64(csum.begin(), csum.end(), std::back_inserter(c));
-
-    return c;
+    return challenge;
 }
 
 void

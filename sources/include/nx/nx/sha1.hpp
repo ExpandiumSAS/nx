@@ -22,10 +22,13 @@
 
 #include <iostream>
 #include <string>
+#include <array>
 
 #include <nx/config.h>
 
 namespace nx {
+
+using digest_type = std::array<uint8_t, 20>;
 
 class NX_API SHA1
 {
@@ -36,6 +39,7 @@ public:
     void update(std::istream& is);
 
     std::string final();
+    digest_type digest();
 
     static std::string from_file(const std::string& filename);
 
@@ -51,6 +55,7 @@ private:
 
     void reset();
     void transform(block_type block);
+    void compute_digest();
 
     static void buffer_to_block(const std::string& buffer, block_type block);
     static void read(std::istream& is, std::string& s, std::size_t max);

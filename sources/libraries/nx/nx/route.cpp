@@ -41,6 +41,7 @@ route::operator=(ws_connection ct)
     ws_hook_ = true;
     ct_ = ct;
 
+    std::cout << "Update connection for WS" << std::endl;
     return *this;
 }
 

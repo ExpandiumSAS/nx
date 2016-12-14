@@ -109,7 +109,10 @@ public:
     { return socket_; }
 
     virtual void start()
-    { base_type::postpone(socket_.get_io_service()) << [this]() { read(); }; }
+    {
+        cancel_ = false; 
+        base_type::postpone(socket_.get_io_service()) << [this]() { read(); }; 
+    }
 
     virtual void stop()
     { close(); }
@@ -242,6 +245,17 @@ protected:
         }
     }
 
+    void cancel()
+    {
+        std::lock_guard<std::mutex> lock(m_);
+
+        if (!closed_) {
+            error_code ec;
+            cancel_ = true;            
+            socket_.cancel(ec);
+        }
+    }
+
 private:
     template <typename Callback>
     auto locked(Callback cb)
@@ -254,8 +268,9 @@ private:
     void read()
     {
         std::lock_guard<std::mutex> lock(m_);
+        std::cout << "socket::read: 0x" << std::hex << (uint64_t)this<<std::endl;
 
-        if (stop_ || closed_) {
+        if (stop_ || closed_ || cancel_) {
             return;
         }
 
@@ -279,6 +294,7 @@ private:
                 }
 
                 base_type::postpone(socket_.get_io_service()) << [this]() { read(); };
+
             }
         );
     }
@@ -287,7 +303,7 @@ private:
     {
         std::lock_guard<std::mutex> lock(m_);
 
-        if (stop_ || closed_ || writing_) {
+        if (stop_ || closed_ || writing_ || cancel_) {
             return;
         }
 
@@ -374,6 +390,7 @@ private:
     std::atomic_bool stop_{ false };
     std::atomic_bool soft_stop_{ false };
     std::atomic_bool closed_{ false };
+    std::atomic_bool cancel_{ false };
     write_cmd_queue wcq_;
     buffer_queue bq_;
     file_queue fq_;

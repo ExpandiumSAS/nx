@@ -22,7 +22,8 @@ httpd::operator()(const ws_tag& t)
     r.emplace_back();
 
     r.back() = [](const request& req, buffer& data, reply& rep) {
-        rep.upgraded();
+        std::cout << "HTTP Upgraded Data"<<std::endl;
+        rep.upgrade();
     };
 
     return r.back();

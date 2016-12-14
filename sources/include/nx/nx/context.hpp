@@ -12,7 +12,7 @@ namespace nx {
 class ws;
 
 /// WS contextual class
-struct context {
+struct NX_API context {
     context(ws& w)
     : w_(w)
     {}
@@ -30,7 +30,7 @@ using ws_connect_cb = std::function<
 
 /// WS Message Callback
 using ws_message_cb = std::function<
-    void(context&, buffer& data)
+    void(context&, const buffer& data)
 >;
 
 /// WS Finish Callback

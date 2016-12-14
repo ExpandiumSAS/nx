@@ -55,6 +55,70 @@ SHA1::update(std::istream& is)
 std::string
 SHA1::final()
 {
+    compute_digest();
+
+    // Hex std::string
+    std::ostringstream result;
+
+    for (std::size_t i = 0; i < digest_ints; i++) {
+        result << std::hex << std::setfill('0') << std::setw(8);
+        result << (digest_[i] & 0xffffffff);
+    }
+
+    // Reset for next run
+    reset();
+
+    return result.str();
+}
+
+// Return Digest without HEX transformation
+digest_type 
+SHA1::digest()
+{
+    compute_digest();
+
+    digest_type result;
+
+    for (std::size_t i = 0 ; i < digest_ints ; ++i) {
+        result[i * 4] = (digest_[i] >> 24) & 0xFF;
+        result[i * 4 + 1] = (digest_[i] >> 16) & 0xFF;
+        result[i * 4 + 2] = (digest_[i] >> 8) & 0xFF;
+        result[i * 4 + 3] = digest_[i] & 0xFF;
+    }
+
+    reset();
+    return result;
+}
+
+std::string
+SHA1::from_file(const std::string& filename)
+{
+    
+    std::ifstream stream(filename.c_str(), std::ios::binary);
+    SHA1 checksum;
+    checksum.update(stream);
+
+    return checksum.final();
+}
+
+void
+SHA1::reset()
+{
+    // SHA1 initialization constants
+    digest_[0] = 0x67452301;
+    digest_[1] = 0xefcdab89;
+    digest_[2] = 0x98badcfe;
+    digest_[3] = 0x10325476;
+    digest_[4] = 0xc3d2e1f0;
+
+    // Reset counters
+    transforms_ = 0;
+    buffer_ = "";
+}
+
+void 
+SHA1::compute_digest()
+{
     // Total number of hashed bits
     uint64_t total_bits = (transforms_ * block_bytes + buffer_.size()) * 8;
 
@@ -82,45 +146,6 @@ SHA1::final()
     block[block_ints - 2] = (total_bits >> 32);
 
     transform(block);
-
-    // Hex std::string
-    std::ostringstream result;
-
-    for (std::size_t i = 0; i < digest_ints; i++) {
-        result << std::hex << std::setfill('0') << std::setw(8);
-        result << (digest_[i] & 0xffffffff);
-    }
-
-    // Reset for next run
-    reset();
-
-    return result.str();
-}
-
-
-std::string
-SHA1::from_file(const std::string& filename)
-{
-    std::ifstream stream(filename.c_str(), std::ios::binary);
-    SHA1 checksum;
-    checksum.update(stream);
-
-    return checksum.final();
-}
-
-void
-SHA1::reset()
-{
-    // SHA1 initialization constants
-    digest_[0] = 0x67452301;
-    digest_[1] = 0xefcdab89;
-    digest_[2] = 0x98badcfe;
-    digest_[3] = 0x10325476;
-    digest_[4] = 0xc3d2e1f0;
-
-    // Reset counters
-    transforms_ = 0;
-    buffer_ = "";
 }
 
 // Hash a single 512-bit block. This is the core of the algorithm.
