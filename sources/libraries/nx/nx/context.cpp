@@ -35,6 +35,13 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
     b << data;
 }
 
+context::~context()
+{
+    if (!data_.empty()) {
+        done();
+    }
+}
+
 context& 
 context::operator<< (const frame_type& type)
 {
@@ -56,12 +63,24 @@ context::operator<< (const std::string& text)
     return *this;
 }
 
-void 
+void
+context::stop()
+{ 
+    async() << [this]() {
+        if (auto w = w_.lock()) {
+            w->stop();
+        }
+    }; 
+}
+
+void
 context::done()
 {
     buffer f;
     encode_frame_data(f, type_ == binary_frame_type, data_);
-    w_ << std::move(f);
+    if (auto w = w_.lock()) {
+        (*w) << std::move(f);
+    }
     data_.clear();
 }
 

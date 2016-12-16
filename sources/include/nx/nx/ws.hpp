@@ -36,22 +36,18 @@ class NX_API ws
     using base_type = tcp_base<ws>;
     using this_type = ws;
 
-    ws()
-        : ctx_{*this}
-    {
-    }
+    ws() = default;
 
     template <typename OtherSocket>
     ws(OtherSocket &&sock)
-        : base_type(std::move(sock)),
-          ctx_{*this}
-    {
-    }
+    : base_type(std::move(sock))
+    {}
 
-    void start();
+    virtual void start();
 
     bool parse_frame(ws_frame &f);
     void process_frames();
+    void process_close();
     void send_request();
 
     void set_callbacks(const ws_connection& w);
@@ -67,8 +63,11 @@ class NX_API ws
     void send_close_frame(uint16_t code);
     void send_ping_pong_frame(bool ping);
 
+    ws_ptr self();
+
+private:
     bool parsed_ = false;
-    context ctx_;
+
 
     ws_connect_cb connect_cb_;
     ws_message_cb message_cb_;

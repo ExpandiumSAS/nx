@@ -5,11 +5,14 @@
 #include <nx/config.h>
 #include <nx/buffer.hpp>
 #include <string>
+#include <memory>
 
 namespace nx {
 
 /// Forwzard declaration
-class ws;
+class ws; 
+using ws_ptr = std::shared_ptr<ws>;
+using ws_weak_ptr = std::weak_ptr<ws>;
 
 const uint8_t text_frame_type = 0;
 const uint8_t binary_frame_type = 1;
@@ -25,35 +28,48 @@ const frame_type ws_json = { text_frame_type };
 /// WS contextual class
 class NX_API context {
 public:
-    context(ws& w)
-    : w_(w)
+    context() = default;
+    context(ws_ptr w)
+    : w_{w}
     {}
+
+    ~context();
+
+    context(const context& ) = delete;
+    context(context&& ) = default;
+
+    context& operator=(const context& ) = delete;
+    context& operator=(context&& ) = default;
 
     context& operator<< (const frame_type& );
     context& operator<< (const buffer& data);
     context& operator<< (const std::string& text);
 
+    void stop();
+
+private:
+    friend class ws;
     void done();
     
 private:
-    ws& w_;
+    ws_weak_ptr w_;
     buffer data_;
     uint8_t type_{ text_frame_type };
 };
 
 /// WS Connection Callback 
 using ws_connect_cb = std::function<
-    void(context&)
+    void(context&&)
 >;
 
 /// WS Message Callback
 using ws_message_cb = std::function<
-    void(context&, const buffer& data)
+    void(context&&, const buffer& data)
 >;
 
 /// WS Finish Callback
 using ws_finish_cb = std::function<
-    void(context&)
+    void(context&&)
 >;
 
 struct ws_tag {};
