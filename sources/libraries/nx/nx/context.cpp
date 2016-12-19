@@ -36,11 +36,7 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
 }
 
 context::~context()
-{
-    if (!data_.empty()) {
-        done();
-    }
-}
+{ flush(); }
 
 context& 
 context::operator<< (const frame_type& type)
@@ -68,6 +64,18 @@ context::operator<< (const json& j)
 
 context& 
 context::operator<< (const jsonv::value& v)
+{
+    type_ = text_frame_type;
+
+    std::ostringstream oss;
+    oss << v;
+    (*this) << oss.str();
+
+    return *this;
+}
+
+context& 
+context::operator<< (jsonv::value&& v)
 {
     type_ = text_frame_type;
 
@@ -113,14 +121,16 @@ context::operator< (const context& rhs) const
 { return uid() > rhs.uid(); }
 
 void
-context::done()
+context::flush()
 {
-    buffer f;
-    encode_frame_data(f, type_ == binary_frame_type, data_);
-    if (auto w = w_.lock()) {
-        (*w) << std::move(f);
+    if (!data_.empty()) {
+        buffer f;
+        encode_frame_data(f, type_ == binary_frame_type, data_);
+        if (auto w = w_.lock()) {
+            (*w) << std::move(f);
+        }
+        data_.clear();
     }
-    data_.clear();
 }
 
 }   // namespace nx

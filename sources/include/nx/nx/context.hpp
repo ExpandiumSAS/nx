@@ -53,6 +53,8 @@ public:
         return *this;
     }
 
+    context& operator<< (jsonv::value&& v);
+
     void stop();
 
     std::string uid();
@@ -60,10 +62,8 @@ public:
 
     bool operator< (const nx::context& rhs) const;
 
-private:
-    friend class ws;
-    void done();
-    
+    void flush();
+
 private:
     ws_weak_ptr w_;
     buffer data_;
