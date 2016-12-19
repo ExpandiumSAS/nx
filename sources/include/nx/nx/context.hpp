@@ -4,12 +4,13 @@
 
 #include <nx/config.h>
 #include <nx/buffer.hpp>
+#include <nx/json.hpp>
 #include <string>
 #include <memory>
 
 namespace nx {
 
-/// Forwzard declaration
+/// Forward declaration
 class ws; 
 using ws_ptr = std::shared_ptr<ws>;
 using ws_weak_ptr = std::weak_ptr<ws>;
@@ -28,7 +29,6 @@ const frame_type ws_json = { text_frame_type };
 /// WS contextual class
 class NX_API context {
 public:
-    context() = default;
     context(ws_ptr w)
     : w_{w}
     {}
@@ -43,9 +43,22 @@ public:
 
     context& operator<< (const frame_type& );
     context& operator<< (const buffer& data);
-    context& operator<< (const std::string& text);
+    context& operator<< (const json& j);
+    context& operator<< (const jsonv::value& v);
+
+    template<typename T>
+    context& operator<< (T&& v)
+    {
+        data_ << std::forward<T>(v);
+        return *this;
+    }
 
     void stop();
+
+    std::string uid();
+    std::string uid() const;
+
+    bool operator< (const nx::context& rhs) const;
 
 private:
     friend class ws;
@@ -56,6 +69,7 @@ private:
     buffer data_;
     uint8_t type_{ text_frame_type };
 };
+
 
 /// WS Connection Callback 
 using ws_connect_cb = std::function<

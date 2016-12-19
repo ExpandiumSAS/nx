@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <uuid.h>
 
 #include <random>
 #include <iterator>
@@ -36,9 +37,6 @@ void
 ws::finish(uint16_t code)
 {
     send_close_frame(code);
-    if (finish_cb_) {
-        finish_cb_(context(self()));
-    }
     close();
 }
 
@@ -204,6 +202,14 @@ ws::set_callbacks(const ws_connection& w)
     finish_cb_ = w.finish_cb;
 }
 
+std::string 
+ws::uid()
+{ return uid_; }
+
+const std::string& 
+ws::uid() const
+{ return uid_; }
+
 void 
 ws::send_close_frame(uint16_t code)
 {
@@ -269,6 +275,27 @@ ws::server_handshake(const request& req, reply& rep)
 ws_ptr 
 ws::self()
 { return std::static_pointer_cast<ws>(shared_from_this()); }
+
+std::string 
+ws::make_uid()
+{
+     static const char* const lut = "0123456789ABCDEF";
+
+    uuid_t uuid;
+
+    uuid_generate(uuid);
+
+    std::string id;
+
+    id.reserve(2 * sizeof(uuid_t));
+
+    for (const auto& c : uuid) {
+        id.push_back(lut[c >> 4]);
+        id.push_back(lut[c & 15]);
+    }
+
+    return id;
+}
 
 } // namespace nx
 

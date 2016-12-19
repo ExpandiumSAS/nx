@@ -57,9 +57,24 @@ context::operator<< (const buffer& data)
 }
 
 context& 
-context::operator<< (const std::string& text)
+context::operator<< (const json& j)
 {
-    data_ << text;
+    type_ = text_frame_type;
+
+    (*this) << j;
+    return *this;
+}
+
+
+context& 
+context::operator<< (const jsonv::value& v)
+{
+    type_ = text_frame_type;
+
+    std::ostringstream oss;
+    oss << v;
+    (*this) << oss.str();
+
     return *this;
 }
 
@@ -72,6 +87,30 @@ context::stop()
         }
     }; 
 }
+
+std::string 
+context::uid()
+{
+    std::string result;
+    if (auto w = w_.lock()) {
+        result = w->uid();
+    }
+    return result;
+}
+
+std::string
+context::uid() const
+{
+    std::string result;
+    if (auto w = w_.lock()) {
+        result = w->uid();
+    }
+    return result;
+}
+
+bool 
+context::operator< (const context& rhs) const
+{ return uid() > rhs.uid(); }
 
 void
 context::done()
