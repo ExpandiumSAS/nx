@@ -37,29 +37,31 @@ class NX_API ws
     using this_type = ws;
 
     ws()
-        : ctx_{*this}
-    {
-    }
+    : uid_(make_uid())
+    {}
 
     template <typename OtherSocket>
     ws(OtherSocket &&sock)
-        : base_type(std::move(sock)),
-          ctx_{*this}
-    {
-    }
+    : base_type(std::move(sock)),
+    uid_(make_uid())
+    {}
 
-    void start();
+    virtual void start();
 
     bool parse_frame(ws_frame &f);
     void process_frames();
+    void process_close();
     void send_request();
 
     void set_callbacks(const ws_connection& w);
 
+    std::string uid();
+    const std::string& uid() const;
+
     static void server_handshake(const request &req, reply &rep);
     static std::string server_challenge(const request &req);
 
-  private:
+private:
     void finish(uint16_t code);
 
     void client_handshake();
@@ -67,8 +69,14 @@ class NX_API ws
     void send_close_frame(uint16_t code);
     void send_ping_pong_frame(bool ping);
 
+    ws_ptr self();
+
+    static std::string make_uid();
+
+private:
     bool parsed_ = false;
-    context ctx_;
+    std::string uid_;
+
 
     ws_connect_cb connect_cb_;
     ws_message_cb message_cb_;

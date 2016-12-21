@@ -19,9 +19,9 @@ BOOST_AUTO_TEST_CASE(ws_server)
 
     // httpd hd;
     // hd(WS) / "echo" = ws_connection(
-    //     [](auto& ctx, const buffer& data) {
+    //     [](auto&& ctx, const buffer& data) {
     //         std::string str(data.begin(), data.end());
-    //         ctx << "reponse: " << str;
+    //         ctx << ws_text << "reponse: " << str;
     //     }
     // );
 

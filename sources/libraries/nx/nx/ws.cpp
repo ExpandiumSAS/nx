@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <uuid.h>
 
 #include <random>
 #include <iterator>
@@ -22,9 +23,13 @@ ws::start()
     (*this)[tags::on_read] = [](ws& w) { 
         w.process_frames(); 
     };
+    (*this)[tags::on_close] = [](ws& w) {
+        w.process_close();
+    };
+
     base_type::start();
     if (connect_cb_) {
-        connect_cb_(ctx_);
+        connect_cb_(context(self()));
     } 
 }
 
@@ -32,9 +37,6 @@ void
 ws::finish(uint16_t code)
 {
     send_close_frame(code);
-    if (finish_cb_) {
-        finish_cb_(ctx_);
-    }
     close();
 }
 
@@ -144,8 +146,7 @@ ws::process_frames()
 
             case WS_OP_TEXT_FRAME:
             case WS_OP_BINARY_FRAME:
-                message_cb_(ctx_, f.payload);
-                ctx_.done();
+                message_cb_(context(self()), f.payload);
             break;
 
             case WS_OP_CLOSE: {
@@ -157,6 +158,13 @@ ws::process_frames()
     }
 }
 
+void 
+ws::process_close()
+{
+    if (finish_cb_) {
+        finish_cb_(context(self()));
+    }
+}
 
 // void
 // ws::send_request()
@@ -193,6 +201,14 @@ ws::set_callbacks(const ws_connection& w)
     message_cb_ = w.message_cb;
     finish_cb_ = w.finish_cb;
 }
+
+std::string 
+ws::uid()
+{ return uid_; }
+
+const std::string& 
+ws::uid() const
+{ return uid_; }
 
 void 
 ws::send_close_frame(uint16_t code)
@@ -254,6 +270,31 @@ ws::server_handshake(const request& req, reply& rep)
         << connection_upgrade
         << header{ Sec_WebSocket_Accept, server_challenge(req) }
         ;
+}
+
+ws_ptr 
+ws::self()
+{ return std::static_pointer_cast<ws>(shared_from_this()); }
+
+std::string 
+ws::make_uid()
+{
+     static const char* const lut = "0123456789ABCDEF";
+
+    uuid_t uuid;
+
+    uuid_generate(uuid);
+
+    std::string id;
+
+    id.reserve(2 * sizeof(uuid_t));
+
+    for (const auto& c : uuid) {
+        id.push_back(lut[c >> 4]);
+        id.push_back(lut[c & 15]);
+    }
+
+    return id;
 }
 
 } // namespace nx

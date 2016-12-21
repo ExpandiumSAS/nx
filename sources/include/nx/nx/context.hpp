@@ -4,49 +4,86 @@
 
 #include <nx/config.h>
 #include <nx/buffer.hpp>
+#include <nx/json.hpp>
 #include <string>
+#include <memory>
 
 namespace nx {
 
-/// Forwzard declaration
-class ws;
+/// Forward declaration
+class ws; 
+using ws_ptr = std::shared_ptr<ws>;
+using ws_weak_ptr = std::weak_ptr<ws>;
+
+const uint8_t text_frame_type = 0;
+const uint8_t binary_frame_type = 1;
+
+struct frame_type {
+    const uint8_t value;
+};
+
+const frame_type ws_text = { text_frame_type };
+const frame_type ws_binary = { binary_frame_type };
+const frame_type ws_json = { text_frame_type };
 
 /// WS contextual class
 class NX_API context {
 public:
-    context(ws& w)
-    : w_(w)
+    context(ws_ptr w)
+    : w_{w}
     {}
 
-    context& operator<< (const buffer& data);
-    context& operator<< (const std::string& text);
+    ~context();
 
-    void done();
-    
+    context(const context& ) = delete;
+    context(context&& ) = default;
+
+    context& operator=(const context& ) = delete;
+    context& operator=(context&& ) = default;
+
+    context& operator<< (const frame_type& );
+    context& operator<< (const buffer& data);
+    context& operator<< (const json& j);
+    context& operator<< (const jsonv::value& v);
+
+    template<typename T>
+    context& operator<< (T&& v)
+    {
+        data_ << std::forward<T>(v);
+        return *this;
+    }
+
+    context& operator<< (jsonv::value&& v);
+
+    void stop();
+
+    std::string uid();
+    std::string uid() const;
+
+    bool operator< (const nx::context& rhs) const;
+
+    void flush();
+
 private:
-    enum frame_type {
-        BINARY = 0,
-        TEXT = 1
-    };
-private:
-    ws& w_;
+    ws_weak_ptr w_;
     buffer data_;
-    frame_type type_{ TEXT };
+    uint8_t type_{ text_frame_type };
 };
+
 
 /// WS Connection Callback 
 using ws_connect_cb = std::function<
-    void(context&)
+    void(context&&)
 >;
 
 /// WS Message Callback
 using ws_message_cb = std::function<
-    void(context&, const buffer& data)
+    void(context&&, const buffer& data)
 >;
 
 /// WS Finish Callback
 using ws_finish_cb = std::function<
-    void(context&)
+    void(context&&)
 >;
 
 struct ws_tag {};

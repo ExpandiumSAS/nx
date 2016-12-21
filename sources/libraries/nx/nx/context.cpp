@@ -35,30 +35,102 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
     b << data;
 }
 
+context::~context()
+{ flush(); }
+
+context& 
+context::operator<< (const frame_type& type)
+{
+    type_ = type.value;
+    return *this;
+}
 
 context& 
 context::operator<< (const buffer& data)
-{
-    type_ = BINARY;
+{   
     data_ << data;
     return *this;
 }
 
 context& 
-context::operator<< (const std::string& text)
+context::operator<< (const json& j)
 {
-    type_ = TEXT;
-    data_ << text;
+    type_ = text_frame_type;
+
+    (*this) << j;
     return *this;
 }
 
-void 
-context::done()
+
+context& 
+context::operator<< (const jsonv::value& v)
 {
-    buffer f;
-    encode_frame_data(f, type_ == BINARY, data_);
-    w_ << std::move(f);
-    data_.clear();
+    type_ = text_frame_type;
+
+    std::ostringstream oss;
+    oss << v;
+    (*this) << oss.str();
+
+    return *this;
+}
+
+context& 
+context::operator<< (jsonv::value&& v)
+{
+    type_ = text_frame_type;
+
+    std::ostringstream oss;
+    oss << v;
+    (*this) << oss.str();
+
+    return *this;
+}
+
+void
+context::stop()
+{ 
+    async() << [this]() {
+        if (auto w = w_.lock()) {
+            w->stop();
+        }
+    }; 
+}
+
+std::string 
+context::uid()
+{
+    std::string result;
+    if (auto w = w_.lock()) {
+        result = w->uid();
+    }
+    return result;
+}
+
+std::string
+context::uid() const
+{
+    std::string result;
+    if (auto w = w_.lock()) {
+        result = w->uid();
+    }
+    return result;
+}
+
+bool 
+context::operator< (const context& rhs) const
+{ return uid() > rhs.uid(); }
+
+void
+context::flush()
+{
+    if (!data_.empty()) {
+        buffer f;
+        encode_frame_data(f, type_ == binary_frame_type, data_);
+        if (auto w = w_.lock()) {
+            (*w) << std::move(f);
+        }
+        data_.clear();
+    }
 }
 
 }   // namespace nx

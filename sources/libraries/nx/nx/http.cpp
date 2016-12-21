@@ -80,15 +80,7 @@ http::process_request()
                 rep_ | [this,self]() mutable {
                     *this << rep_;
 
-                    async() << [this,self]() {
-                        this->cancel();
-                        
-                        auto& w = this->upgrade_connection<ws>();
-                        w.set_callbacks(rep_.websocket_callback());
-
-                        this->dispose();
-                        w.start();
-                    };
+                    process_upgrade();
                 };
             } else {
                 // Register callback to be called when reply is ready to send
@@ -107,6 +99,21 @@ http::process_request()
     if (!rep_.postponed()) {
         rep_.done();
     }
+}
+
+void 
+http::process_upgrade()
+{
+    auto self = ptr();
+    async() << [this,self]() {
+        this->cancel();
+        
+        auto& w = this->upgrade_connection<ws>();
+        w.set_callbacks(rep_.websocket_callback());
+
+        this->dispose();
+        w.start();
+    };
 }
 
 bool

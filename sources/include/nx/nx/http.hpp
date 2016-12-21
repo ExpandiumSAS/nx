@@ -49,10 +49,13 @@ public:
     http& operator<<(request_cb cb);
     http& operator<<(reply_cb cb);
 
-    template<typename SocketType>
-    SocketType& upgrade_connection()
+    template<
+        typename SocketType,
+        typename ...Args
+    >
+    SocketType& upgrade_connection(Args&& ...args)
     {
-        auto upg_ct = new_object<SocketType>(sock());
+        auto upg_ct = new_object<SocketType>(sock(), std::forward<Args>(args)...);
         auto& upg = *upg_ct;
 
         return upg;
@@ -62,6 +65,8 @@ private:
     bool request_parsed();
     bool reply_parsed();
     void call_or_fail(void_cb cb);
+
+    void process_upgrade();
 
     bool parsed_ = false;
     request req_;
