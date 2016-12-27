@@ -68,14 +68,13 @@ http::process_request()
                 rbuf() >> body;
                 req_ << attributes(body, '&');
             }
-
-            // All data arrived, call upper handler
-            request_cb_(req_, rbuf(), rep_);
-
             
             auto self = ptr();
             if (rep_.upgraded()) {
                 ws::server_handshake(req_, rep_);
+
+                // All data arrived, call upper handler
+                request_cb_(req_, rbuf(), rep_);
 
                 rep_ | [this,self]() mutable {
                     *this << rep_;
@@ -92,6 +91,9 @@ http::process_request()
                     close_after_write();
                     self.reset();
                 };
+
+                // All data arrived, call upper handler
+                request_cb_(req_, rbuf(), rep_);
             }
         }
     );
