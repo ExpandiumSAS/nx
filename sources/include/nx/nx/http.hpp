@@ -115,7 +115,7 @@ async_connect(const endpoint& ep, request&& req, OnReply&& cb)
 
 template <typename OnReply>
 http&
-sync_connect(const endpoint& ep, request&& req, OnReply&& cb)
+sync_connect(const endpoint& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 {
     auto t = std::make_shared<task>();
     auto p = new_object<http>(std::move(req), std::move(cb), t->get_io_service());
@@ -137,7 +137,11 @@ sync_connect(const endpoint& ep, request&& req, OnReply&& cb)
         }
     );
 
-    cv.wait();
+    if (timeout_s > 0) {
+        cv.wait_for((uint64_t)timeout_s * 1000);
+    } else {
+        cv.wait();
+    }
     t->stop();
 
     return result;

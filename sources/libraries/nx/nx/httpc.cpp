@@ -2,8 +2,8 @@
 
 namespace nx {
 
-http_request::http_request(const method& m, const endpoint& ep, bool sync)
-: sync_(sync),
+http_request::http_request(const method& m, const endpoint& ep, int32_t timeout)
+: timeout_(timeout),
   req_(m),
   ep_(ep)
 {}
@@ -17,7 +17,7 @@ http_request::~http_request()
 http_request&
 http_request::operator=(http_request&& other)
 {
-    sync_ = other.sync_;
+    timeout_ = other.timeout_;
     req_ = std::move(other.req_);
     ep_ = std::move(other.ep_);
     reply_cb_ = std::move(other.reply_cb_);
@@ -44,8 +44,8 @@ http_request::operator=(reply_cb cb)
 void
 http_request::start()
 {
-    if (sync_) { 
-        sync_connect(ep_, std::move(req_), std::move(reply_cb_));
+    if (timeout_ >= 0) { 
+        sync_connect(ep_, std::move(req_), std::move(reply_cb_), timeout_);
     } else {
         async_connect(ep_, std::move(req_), std::move(reply_cb_));
     } 
@@ -53,10 +53,10 @@ http_request::start()
 
 http_request
 httpc::operator()(const method& m, const endpoint& ep)
-{ return http_request(m, ep, false); }
+{ return http_request(m, ep, -1); }
 
 http_request
-httpc_sync::operator()(const method& m, const endpoint& ep)
-{ return http_request(m, ep, true); }
+httpc_sync::operator()(const method& m, const endpoint& ep, int32_t timeout)
+{ return http_request(m, ep, timeout); }
 
 } // namespace nx
