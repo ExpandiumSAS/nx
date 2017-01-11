@@ -175,4 +175,20 @@ request::is_form() const
         ;
 }
 
+bool
+request::is_upgrade() const
+{
+    return
+        *this == GET
+        &&
+        has(upgrade_websocket)
+        &&
+        has(connection_upgrade)
+        &&
+        has(Sec_WebSocket_Key)
+        &&
+        has(Sec_WebSocket_Version)
+        ;
+}
+
 } // namespace nx

@@ -38,9 +38,6 @@ public:
     void postpone();
     bool postponed();
 
-    void upgrade();
-    bool upgraded();
-
     void done();
 
     bool operator==(const http_status& s) const;

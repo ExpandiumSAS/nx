@@ -21,9 +21,7 @@ httpd::operator()(const ws_tag& t)
 
     r.emplace_back();
 
-    r.back() = [](const request& req, buffer& data, reply& rep) {
-        rep.upgrade();
-    };
+    r.back() = [](const request& req, buffer& data, reply& rep) {};
 
     return r.back();
 }

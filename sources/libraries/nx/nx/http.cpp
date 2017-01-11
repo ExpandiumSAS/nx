@@ -70,17 +70,17 @@ http::process_request()
             }
             
             auto self = ptr();
-            if (rep_.upgraded()) {
+            if (req_.is_upgrade()) {
                 ws::server_handshake(req_, rep_);
-
-                // All data arrived, call upper handler
-                request_cb_(req_, rbuf(), rep_);
 
                 rep_ | [this,self]() mutable {
                     *this << rep_;
 
                     process_upgrade();
                 };
+
+                 // All data arrived, call upper handler
+                request_cb_(req_, rbuf(), rep_);
             } else {
                 // Register callback to be called when reply is ready to send
                 // (will be called last by rep.done())

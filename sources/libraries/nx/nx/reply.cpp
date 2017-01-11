@@ -113,14 +113,6 @@ bool
 reply::postponed()
 { return postponed_; }
 
-void 
-reply::upgrade()
-{ upgraded_ = true; }
-
-bool
-reply::upgraded()
-{ return upgraded_; }
-
 void
 reply::done()
 {

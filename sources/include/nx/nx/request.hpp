@@ -51,6 +51,7 @@ public:
     request& operator<<(const attributes& a);
 
     bool is_form() const;
+    bool is_upgrade() const;
 
 private:
     std::string method_;
