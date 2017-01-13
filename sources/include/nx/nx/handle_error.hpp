@@ -34,7 +34,7 @@ handle_error(Object& o, const char* what, const error_code& e)
         stop = true;
     } else if (!o.handler(tags::on_error)(o, e)) {
         // Unhandled error
-        std::cerr << "unhandled error: " << e.message() << std::endl;
+        std::cerr << "unhandled error: " << what << " - "<< e.message() << std::endl;
         stop = true;
     }
 
