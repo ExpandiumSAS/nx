@@ -359,19 +359,23 @@ private:
     template <typename Queue>
     void handle_write(const char* what, const error_code& ec, Queue& q)
     {
-        writing_ = false;
+        locked([&]() { pop_queue(wcq_); pop_queue(q); });
+
+        bool write_next = true;
 
         if (stop_) {
-            return;
+            write_next = false;
         }
 
         if (handle_error(derived(), what, ec)) {
-            return;
+            write_next = false;
         }
 
-        locked([&]() { pop_queue(wcq_); pop_queue(q); });
+        writing_ = false;
 
-        base_type::postpone(socket_.get_io_service()) << [this](){ write(); };
+        if (write_next) {
+            base_type::postpone(socket_.get_io_service()) << [this](){ write(); };
+        }
     }
 
     template <typename Queue>
