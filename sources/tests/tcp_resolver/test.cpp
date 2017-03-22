@@ -55,6 +55,9 @@ BOOST_AUTO_TEST_CASE(tcp_resolver)
     auto ep = nx::resolve_endpoint("localhost", 80);
     BOOST_CHECK_EQUAL(ep, nx::make_endpoint("::1", 80));
 
+    auto ep2 = nx::resolve_endpoint("127.0.0.1", 80);
+    BOOST_CHECK_EQUAL(ep2, nx::make_endpoint("127.0.0.1", 80));
+
     nx::stop();
 
     BOOST_CHECK_MESSAGE(got_new_connection, "server got a connection");
