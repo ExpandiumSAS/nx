@@ -7,6 +7,7 @@
 #include <nx/unit_test.hpp>
 
 #include <nx/nx.hpp>
+#include <nx/resolver.hpp>
 
 BOOST_AUTO_TEST_CASE(tcp_resolver)
 {
@@ -50,6 +51,10 @@ BOOST_AUTO_TEST_CASE(tcp_resolver)
     );
 
     cv.wait();
+
+    auto ep = nx::resolve_endpoint("localhost", 80);
+    BOOST_CHECK_EQUAL(ep, nx::make_endpoint("::1", 80));
+
     nx::stop();
 
     BOOST_CHECK_MESSAGE(got_new_connection, "server got a connection");
