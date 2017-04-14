@@ -164,7 +164,7 @@ public:
     route_cb POST(const collection_tag& t)
     {
         return [&](const request& req, buffer& data, reply& rep) {
-            auto id = make_id();
+            auto id = this->make_id();
             value_type item;
 
             if (data.empty()) {

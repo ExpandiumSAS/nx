@@ -1,4 +1,5 @@
 #include <nx/http.hpp>
+#include <nx/ws.hpp>
 
 namespace nx {
 
@@ -68,7 +69,7 @@ http::process_request()
                 rbuf() >> body;
                 req_ << attributes(body, '&');
             }
-            
+
             auto self = ptr();
             if (req_.is_upgrade()) {
                 ws::server_handshake(req_, rep_);
@@ -103,13 +104,13 @@ http::process_request()
     }
 }
 
-void 
+void
 http::process_upgrade()
 {
     auto self = ptr();
     async() << [this,self]() {
         this->cancel();
-        
+
         auto& w = this->upgrade_connection<ws>();
         w.set_callbacks(rep_.websocket_callback());
 

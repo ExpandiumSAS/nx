@@ -9,7 +9,6 @@
 #include <nx/reply.hpp>
 #include <nx/handlers.hpp>
 #include <nx/cond_var.hpp>
-#include <nx/ws.hpp>
 
 namespace nx {
 
@@ -125,7 +124,7 @@ sync_connect(const endpoint& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 
     h[tags::on_read] = [&cv](http& t) {
         if (t.process_reply()) {
-            cv.notify();    
+            cv.notify();
         }
     };
 
