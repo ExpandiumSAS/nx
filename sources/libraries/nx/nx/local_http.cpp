@@ -1,26 +1,26 @@
-#include <nx/http.hpp>
-#include <nx/ws.hpp>
+#include <nx/local_http.hpp>
+#include <nx/local_ws.hpp>
 
 namespace nx {
 
-http::http(request&& req, reply_cb&& cb)
+local_http::local_http(request&& req, reply_cb&& cb)
 : req_(std::move(req)),
 reply_cb_(std::move(cb))
 {}
 
-http::http(request&& req, reply_cb&& cb, asio::io_service& io)
+local_http::local_http(request&& req, reply_cb&& cb, asio::io_service& io)
 : base_type(io),
   req_(std::move(req)),
   reply_cb_(std::move(cb))
 {}
 
-http::http(reply&& rep, request_cb&& cb)
+local_http::local_http(reply&& rep, request_cb&& cb)
 : rep_(std::move(rep)),
 request_cb_(std::move(cb))
 {}
 
 bool
-http::request_parsed()
+local_http::request_parsed()
 {
     if (!parsed_) {
         parsed_ = req_.parse(rbuf());
@@ -30,7 +30,7 @@ http::request_parsed()
 }
 
 bool
-http::reply_parsed()
+local_http::reply_parsed()
 {
     if (!parsed_) {
         parsed_ = rep_.parse(rbuf());
@@ -40,7 +40,7 @@ http::reply_parsed()
 }
 
 void
-http::call_or_fail(void_cb cb)
+local_http::call_or_fail(void_cb cb)
 {
     try {
         cb();
@@ -53,7 +53,7 @@ http::call_or_fail(void_cb cb)
 }
 
 void
-http::process_request()
+local_http::process_request()
 {
     call_or_fail(
         [&]() {
@@ -72,7 +72,7 @@ http::process_request()
 
             auto self = ptr();
             if (req_.is_upgrade()) {
-                ws::server_handshake(req_, rep_);
+                local_ws::server_handshake(req_, rep_);
 
                 rep_ | [this,self]() mutable {
                     *this << rep_;
@@ -105,13 +105,13 @@ http::process_request()
 }
 
 void
-http::process_upgrade()
+local_http::process_upgrade()
 {
     auto self = ptr();
     async() << [this,self]() {
         this->cancel();
 
-        auto& w = this->upgrade_connection<ws>();
+        auto& w = this->upgrade_connection<local_ws>();
         w.set_callbacks(rep_.websocket_callback());
 
         this->dispose();
@@ -120,7 +120,7 @@ http::process_upgrade()
 }
 
 bool
-http::process_reply()
+local_http::process_reply()
 {
     try {
         if (!reply_parsed() || rbuf().size() < rep_.content_length()) {
@@ -140,22 +140,22 @@ http::process_reply()
 }
 
 void
-http::send_request()
+local_http::send_request()
 {
     req_ << header("Host", local_str());
     *this << std::move(req_);
 }
 
-http&
-http::operator<<(request_cb cb)
+local_http&
+local_http::operator<<(request_cb cb)
 {
     request_cb_ = std::move(cb);
 
     return *this;
 }
 
-http&
-http::operator<<(reply_cb cb)
+local_http&
+local_http::operator<<(reply_cb cb)
 {
     reply_cb_ = std::move(cb);
 
@@ -163,4 +163,3 @@ http::operator<<(reply_cb cb)
 }
 
 } // namespace nx
-

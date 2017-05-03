@@ -36,6 +36,7 @@ public:
     const std::string& method() const;
     const std::string& path() const;
 
+    bool has_a(const std::string& name) const;
     std::string& a(const std::string& name);
     const std::string& a(const std::string& name) const;
 

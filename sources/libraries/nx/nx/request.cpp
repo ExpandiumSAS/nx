@@ -116,6 +116,10 @@ const std::string&
 request::path() const
 { return path_; }
 
+bool
+request::has_a(const std::string& name) const
+{ return attrs_.has(name); }
+
 std::string&
 request::a(const std::string& name)
 { return attrs_[name]; }

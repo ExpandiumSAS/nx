@@ -47,7 +47,7 @@ template <
     typename Socket,
     typename... Callbacks
 >
-class socket
+class NX_API socket
 : public socket_base, public object<
     Derived,
     callback<tags::on_read_tag, Derived&>,
@@ -91,7 +91,7 @@ public:
 
     socket& operator=(const socket& other) = delete;
     socket& operator=(socket&& other) = default;
-    
+
     template<typename OtherDerived>
     socket& operator=(socket<OtherDerived, Socket, Callbacks...>&& other)
     {
@@ -110,8 +110,8 @@ public:
 
     virtual void start()
     {
-        cancel_ = false; 
-        base_type::postpone(socket_.get_io_service()) << [this]() { read(); }; 
+        cancel_ = false;
+        base_type::postpone(socket_.get_io_service()) << [this]() { read(); };
     }
 
     virtual void stop()
@@ -251,7 +251,7 @@ protected:
 
         if (!closed_) {
             error_code ec;
-            cancel_ = true;            
+            cancel_ = true;
             socket_.cancel(ec);
         }
     }
@@ -277,7 +277,7 @@ private:
 
         socket_.async_read_some(
             asio::buffer(buf_),
-            [this](const error_code& ec, std::size_t count) {
+            [&](const error_code& ec, std::size_t count) {
                 if (handle_error(derived(), "read", ec)) {
                     return;
                 }
@@ -292,7 +292,7 @@ private:
                     base_type::handler(tags::on_read)(derived());
                 }
 
-                base_type::postpone(socket_.get_io_service()) << [this]() { read(); };
+                base_type::postpone(socket_.get_io_service()) << [&]() { read(); };
 
             }
         );
@@ -308,9 +308,9 @@ private:
 
         if (wcq_.empty()) {
             if (soft_stop_) {
-                base_type::postpone(socket_.get_io_service()) << [this]() { stop(); };
+                base_type::postpone(socket_.get_io_service()) << [&]() { stop(); };
             } else {
-                base_type::postpone(socket_.get_io_service()) << [this]() {
+                base_type::postpone(socket_.get_io_service()) << [&]() {
                     base_type::handler(tags::on_drain)(derived());
                 };
             }
