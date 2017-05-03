@@ -39,6 +39,19 @@ httpd::operator()(const endpoint& ep)
         );
 }
 
+endpoint_local
+httpd::operator()(const endpoint_local& ep)
+{
+    return
+        serve(
+            local_s_,
+            ep,
+            [this](request& req, buffer& data, reply& rep) {
+                (*this)(req, data, rep);
+            }
+        );
+}
+
 httpd&
 httpd::operator<<(json_collection_base& c)
 {
