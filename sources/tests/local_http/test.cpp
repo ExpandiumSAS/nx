@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE http
+#define BOOST_TEST_MODULE local_http
 
 #include <iostream>
 
@@ -7,7 +7,7 @@
 #include <nx/nx.hpp>
 #include <nx/utils.hpp>
 
-BOOST_AUTO_TEST_CASE(http_server)
+BOOST_AUTO_TEST_CASE(http_server_socket_file)
 {
     using namespace nx;
 
@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE(http_server)
 
     deadline.start();
 
-    auto ep = make_endpoint("127.0.0.1");
+    auto ep = make_endpoint_local("/tmp/nx");
     const char* hello_world = "Hello, world!";
 
     httpd hd;
@@ -42,7 +42,6 @@ BOOST_AUTO_TEST_CASE(http_server)
 
     bool got_reply = false;
     bool reply_ok = false;
-
     hc(GET, sep) / "hello" = [&](const reply& rep, buffer& data) {
         got_reply = true;
 

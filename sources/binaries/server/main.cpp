@@ -50,8 +50,17 @@ int main(int ac, char **av)
             << "Server is off!";
     };
 
+    srv(GET) / "Quit" = [&](const request &req, buffer &data, reply &rep) {
+        on = false;
+        rep
+            << text_plain
+            << "Server is quitting!";
+        cv.notify();
+    };
+
     // Bind and listen
     srv(make_endpoint_local("/tmp/nx"));
 
     cv.wait();
+    nx::stop();
 }

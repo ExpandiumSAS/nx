@@ -100,7 +100,9 @@ private:
 
 class local_socket : public local_socket_base<local_socket>
 {
-    
+    using base_type = local_socket_base<local_socket>;
+
+    using base_type::local_socket_base;
 };
 
 template <typename Socket, typename Connected>
