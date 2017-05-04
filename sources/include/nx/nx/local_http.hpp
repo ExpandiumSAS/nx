@@ -13,14 +13,7 @@
 
 namespace nx {
 
-/*using request_cb = std::function<
-    void(request& req, buffer& data, reply& rep)
->;
-using reply_cb = std::function<
-    void(reply& rep, buffer& data)
->;
-
-struct http_async_tag {};
+/*struct http_async_tag {};
 struct http_sync_tag {};*/
 
 class NX_API local_http : public local_socket_base<local_http>

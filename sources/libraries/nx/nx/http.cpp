@@ -3,7 +3,7 @@
 
 namespace nx {
 
-http::http(request&& req, reply_cb&& cb)
+/*http::http(request&& req, reply_cb&& cb)
 : req_(std::move(req)),
 reply_cb_(std::move(cb))
 {}
@@ -160,7 +160,7 @@ http::operator<<(reply_cb cb)
     reply_cb_ = std::move(cb);
 
     return *this;
-}
+}*/
 
 } // namespace nx
 
