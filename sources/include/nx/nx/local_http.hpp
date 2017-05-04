@@ -13,9 +13,6 @@
 
 namespace nx {
 
-/*struct http_async_tag {};
-struct http_sync_tag {};*/
-
 class NX_API local_http : public local_socket_base<local_http>
 {
 public:

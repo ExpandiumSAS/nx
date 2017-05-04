@@ -132,7 +132,6 @@ serve(
     auto& a = s.make_acceptor();
 
     a.open(from.protocol());
-    //a.set_option(asio::ip::tcp::acceptor::reuse_address(true));
     s.reuse_addr(a, from);
     a.bind(from);
     a.listen();

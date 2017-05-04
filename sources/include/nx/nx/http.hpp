@@ -24,15 +24,13 @@ using reply_cb = std::function<
 struct http_async_tag {};
 struct http_sync_tag {};
 
-// ici on va faire une seule classe template
-// (pour hériter soit de tcp_base ou local_socket_base)
-// au lieu d'avoir 2 classes (car le code dans le ccp est indentique)
-
 template <template <typename, typename ...> class T>
 class NX_API http : public T<http<T> >
 {
 public:
     using base_type = T<http<T> >;
+    //using ws_type = ws<T>;
+    using ws_type = ws;
     using this_type = http<T>;
 
     using base_type::T;
@@ -78,7 +76,7 @@ public:
 
                 auto self = this->ptr();
                 if (this->req_.is_upgrade()) {
-                    ws::server_handshake(this->req_, this->rep_);
+                    ws_type::server_handshake(this->req_, this->rep_);
 
                     this->rep_ | [this,self]() mutable {
                         *this << this->rep_;
@@ -200,7 +198,7 @@ private:
         async() << [this,self]() {
             this->cancel();
 
-            auto& w = this->upgrade_connection<ws>();
+            auto& w = this->upgrade_connection<ws_type>();
             w.set_callbacks(rep_.websocket_callback());
 
             this->dispose();
@@ -289,6 +287,79 @@ sync_connect(const endpoint& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 
     return result;
 }
+
+// fonctions temporaires en attendant que je template
+/*template <typename OnRequest>
+endpoint_local
+serve(http_local& h, const endpoint_local& ep, OnRequest&& cb)
+{
+    return
+        serve(
+            h,
+            ep,
+            [cb = std::move(cb)](http_local& c) {
+                c << std::move(cb);
+            },
+            [](http_local& c) {
+                c.process_request();
+            }
+        );
+}
+
+
+template <typename OnReply>
+http_local&
+async_connect(const endpoint_local& ep, request&& req, OnReply&& cb)
+{
+    auto p = new_object<http_local>(std::move(req), std::move(cb));
+    auto& h = *p;
+
+    h[tags::on_read] = [](http_local& t) {
+        t.process_reply();
+    };
+
+    return connect(
+        h,
+        ep,
+        [](http_local& t) {
+            t.send_request();
+        }
+    );
+}
+
+template <typename OnReply>
+http_local&
+sync_connect(const endpoint_local& ep, request&& req, OnReply&& cb, int32_t timeout_s)
+{
+    auto t = std::make_shared<task>();
+    auto p = new_object<http_local>(std::move(req), std::move(cb), t->get_io_service());
+
+    auto& h = *p;
+    cond_var cv;
+
+    h[tags::on_read] = [&cv](http_local& t) {
+        if (t.process_reply()) {
+            cv.notify();
+        }
+    };
+
+    auto& result = connect(
+        h,
+        ep,
+        [](http_local& t) {
+            t.send_request();
+        }
+    );
+
+    if (timeout_s > 0) {
+        cv.wait_for((uint64_t)timeout_s * 1000);
+    } else {
+        cv.wait();
+    }
+    t->stop();
+
+    return result;
+}*/
 
 } // namespace nx
 

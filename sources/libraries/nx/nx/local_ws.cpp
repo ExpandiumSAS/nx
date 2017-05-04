@@ -13,9 +13,9 @@
 namespace nx {
 
 // Unique value from RFC 6455
-const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+/*const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-const std::size_t ws_max_len = 10 * 1024 * 1024;
+const std::size_t ws_max_len = 10 * 1024 * 1024;*/
 
 void
 local_ws::start()
