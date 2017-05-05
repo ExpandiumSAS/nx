@@ -6,7 +6,6 @@
 
 #include <nx/config.h>
 #include <nx/http.hpp>
-#include <nx/local_http.hpp>
 #include <nx/methods.hpp>
 #include <nx/request.hpp>
 #include <nx/reply.hpp>

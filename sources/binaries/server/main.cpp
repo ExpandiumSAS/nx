@@ -1,8 +1,6 @@
 #include <iostream>
 
 #include <nx/nx.hpp>
-#include <nx/local_socket.hpp>
-#include <nx/local_http.hpp>
 
 #include <cstdlib>
 #include <cstring>

@@ -5,7 +5,6 @@
 
 #include <nx/config.h>
 #include <nx/http.hpp>
-#include <nx/local_http.hpp>
 #include <nx/methods.hpp>
 #include <nx/route.hpp>
 #include <nx/json_collection.hpp>
