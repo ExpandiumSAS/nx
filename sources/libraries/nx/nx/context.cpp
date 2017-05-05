@@ -35,15 +35,12 @@ encode_frame_data(buffer& b, bool binary, const buffer& data)
     b << data;
 }
 
-context::~context()
+/*context::~context()
 { flush(); }
 
 context& 
 context::operator<< (const frame_type& type)
-{
-    type_ = type.value;
-    return *this;
-}
+{ flush(); }
 
 context& 
 context::operator<< (const buffer& data)
@@ -132,5 +129,5 @@ context::flush()
         data_.clear();
     }
 }
-
+*/
 }   // namespace nx
