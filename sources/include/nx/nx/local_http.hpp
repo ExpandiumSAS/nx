@@ -65,7 +65,7 @@ private:
     reply_cb reply_cb_;
 };
 
-template <typename OnRequest>
+/*template <typename OnRequest>
 endpoint_local
 serve(local_http& h, const endpoint_local& ep, OnRequest&& cb)
 {
@@ -135,7 +135,7 @@ sync_connect(const endpoint_local& ep, request&& req, OnReply&& cb, int32_t time
     t->stop();
 
     return result;
-}
+}*/
 
 } // namespace nx
 

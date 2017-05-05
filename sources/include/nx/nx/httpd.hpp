@@ -27,7 +27,7 @@ private:
     void operator()(request& req, buffer& data, reply& rep);
 
     http_tcp s_;
-    local_http local_s_;
+    http_local local_s_;
     routes_map routes_map_;
 };
 

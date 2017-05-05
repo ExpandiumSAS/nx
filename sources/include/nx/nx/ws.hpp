@@ -35,12 +35,13 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
+template <template <typename, typename ...> class T>
 class NX_API ws
-    : public tcp_base<ws>, public iws
+    : public T<ws<T> >, public iws
 {
   public:
-    using base_type = tcp_base<ws>;
-    using this_type = ws;
+    using base_type = T<ws<T> >;
+    using this_type = ws<T>;
 
     ws()
     : uid_(make_uid())
@@ -69,7 +70,7 @@ class NX_API ws
 
     bool parse_frame(ws_frame &f)
     {
-        auto& b = rbuf();
+        auto& b = this->rbuf();
         auto data = b.data();
 
         if (b.size() < 2) {
@@ -260,7 +261,7 @@ private:
     void finish(uint16_t code)
     {
         send_close_frame(code);
-        close();
+        this->close();
     }
 
     void client_handshake();
@@ -284,7 +285,7 @@ private:
     }
 
     ws_ptr self()
-    { return std::static_pointer_cast<ws>(shared_from_this()); }
+    { return std::static_pointer_cast<ws>(this->shared_from_this()); }
 
     static std::string make_uid()
     {

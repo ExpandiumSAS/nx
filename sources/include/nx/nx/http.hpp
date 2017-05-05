@@ -29,8 +29,8 @@ class NX_API http : public T<http<T> >
 {
 public:
     using base_type = T<http<T> >;
-    //using ws_type = ws<T>;
-    using ws_type = ws;
+    using ws_type = ws<T>;
+    //using ws_type = ws;
     using this_type = http<T>;
 
     using base_type::T;
@@ -289,7 +289,7 @@ sync_connect(const endpoint& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 }
 
 // fonctions temporaires en attendant que je template
-/*template <typename OnRequest>
+template <typename OnRequest>
 endpoint_local
 serve(http_local& h, const endpoint_local& ep, OnRequest&& cb)
 {
@@ -359,7 +359,7 @@ sync_connect(const endpoint_local& ep, request&& req, OnReply&& cb, int32_t time
     t->stop();
 
     return result;
-}*/
+}
 
 } // namespace nx
 
