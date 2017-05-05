@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include <nx/iws.hpp>
 #include <nx/config.h>
 #include <nx/local_socket.hpp>
 #include <nx/request.hpp>
@@ -14,7 +15,7 @@
 namespace nx {
 
 class NX_API local_ws
-    : public local_socket_base<local_ws>
+    : public local_socket_base<local_ws>, public iws
 {
   public:
     using base_type = local_socket_base<local_ws>;
@@ -45,6 +46,12 @@ class NX_API local_ws
     static void server_handshake(const request &req, reply &rep);
     static std::string server_challenge(const request &req);
 
+
+    void stop_socket();
+    
+    void push_in_socket(buffer&& b);
+    void push_in_socket(std::string&& s);
+    void push_in_socket(std::string& s);
 private:
     void finish(uint16_t code);
 

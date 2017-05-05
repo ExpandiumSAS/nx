@@ -29,7 +29,7 @@ local_ws::start()
 
     base_type::start();
     if (connect_cb_) {
-        //connect_cb_(context(self()));
+        connect_cb_(context(self()));
     } 
 }
 
@@ -146,7 +146,7 @@ local_ws::process_frames()
 
             case WS_OP_TEXT_FRAME:
             case WS_OP_BINARY_FRAME:
-                //message_cb_(context(self()), f.payload);
+                message_cb_(context(self()), f.payload);
             break;
 
             case WS_OP_CLOSE: {
@@ -162,7 +162,7 @@ void
 local_ws::process_close()
 {
     if (finish_cb_) {
-        //finish_cb_(context(self()));
+        finish_cb_(context(self()));
     }
 }
 
@@ -274,7 +274,7 @@ local_ws::server_handshake(const request& req, reply& rep)
 
 ws_ptr 
 local_ws::self()
-{ return std::static_pointer_cast<ws>(shared_from_this()); }
+{ return std::static_pointer_cast<local_ws>(shared_from_this()); }
 
 std::string 
 local_ws::make_uid()
@@ -296,5 +296,21 @@ local_ws::make_uid()
 
     return id;
 }
+
+void
+local_ws::stop_socket()
+{ stop(); }
+
+void
+local_ws::push_in_socket(buffer&& b)
+{ (*this) << std::move(b);}
+
+void
+local_ws::push_in_socket(std::string&& s)
+{ (*this) << std::move(s);}
+
+void
+local_ws::push_in_socket(std::string& s)
+{ (*this) << s;}
 
 } // namespace nx

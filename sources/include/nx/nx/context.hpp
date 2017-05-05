@@ -8,17 +8,13 @@
 #include <string>
 #include <memory>
 
+#include <nx/iws.hpp>
+
 namespace nx {
 
 /// Forward declaration
-class ws; 
-using ws_ptr = std::shared_ptr<ws>;
-using ws_weak_ptr = std::weak_ptr<ws>;
-
-template <typename T>
-using t_ptr = std::shared_ptr<T>;
-template <typename T>
-using t_weak_ptr = std::weak_ptr<T>;
+using ws_ptr = std::shared_ptr<iws>;
+using ws_weak_ptr = std::weak_ptr<iws>;
 
 const uint8_t text_frame_type = 0;
 const uint8_t binary_frame_type = 1;
@@ -31,18 +27,14 @@ const frame_type ws_text = { text_frame_type };
 const frame_type ws_binary = { binary_frame_type };
 const frame_type ws_json = { text_frame_type };
 
-NX_API void encode_frame_data(buffer& b, bool binary, const buffer& data);
-
 /// WS contextual class
-template <typename WS>
 class NX_API context {
 public:
-    context(t_ptr<WS> w)
+    context(ws_ptr w)
     : w_{w}
     {}
 
-    ~context()
-    { flush(); }
+    ~context();
 
     context(const context& ) = delete;
     context(context&& ) = default;
@@ -50,33 +42,10 @@ public:
     context& operator=(const context& ) = delete;
     context& operator=(context&& ) = default;
 
-    context& operator<< (const frame_type& )
-    { flush(); }    
-
-    context& operator<< (const buffer& data)
-    {   
-        data_ << data;
-        return *this;
-    }
-
-    context& operator<< (const json& j)
-    {
-        type_ = text_frame_type;
-
-        (*this) << j;
-        return *this;
-    }
-
-    context& operator<< (const jsonv::value& v)
-    {
-        type_ = text_frame_type;
-
-        std::ostringstream oss;
-        oss << v;
-        (*this) << oss.str();
-
-        return *this;
-    }
+    context& operator<< (const frame_type& );
+    context& operator<< (const buffer& data);
+    context& operator<< (const json& j);
+    context& operator<< (const jsonv::value& v);
 
     template<typename T>
     context& operator<< (T&& v)
@@ -85,80 +54,22 @@ public:
         return *this;
     }
 
-    context& operator<< (jsonv::value&& v)
-    {
-        type_ = text_frame_type;
+    context& operator<< (jsonv::value&& v);
 
-        std::ostringstream oss;
-        oss << v;
-        (*this) << oss.str();
+    void stop();
 
-        return *this;
-    }
+    std::string uid();
+    std::string uid() const;
 
-    void stop()
-    { 
-/*        async() << [this]() {
-            if (auto w = w_.lock()) {
-                w->stop();
-            }
-        }; */
-    }
+    bool operator< (const nx::context& rhs) const;
 
-    std::string uid()
-    {
-        std::string result;
-        if (auto w = w_.lock()) {
-            result = w->uid();
-        }
-        return result;
-    }
-
-    std::string uid() const
-    {
-        std::string result;
-        if (auto w = w_.lock()) {
-            result = w->uid();
-        }
-        return result;
-    }
-
-    bool operator< (const nx::context<WS>& rhs) const
-    { return uid() > rhs.uid(); }
-
-    void flush()
-    {
-        if (!data_.empty()) {
-            buffer f;
-            encode_frame_data(f, type_ == binary_frame_type, data_);
-            if (auto w = w_.lock()) {
-                (*w) << std::move(f);
-            }
-            data_.clear();
-        }
-    }
+    void flush();
 
 private:
-    t_weak_ptr<WS> w_;
+    ws_weak_ptr w_;
     buffer data_;
     uint8_t type_{ text_frame_type };
 };
-
-
-/// WS Connection Callback 
-using ws_connect_cb = std::function<
-    void(context<ws>&&)
->;
-
-/// WS Message Callback
-using ws_message_cb = std::function<
-    void(context<ws>&&, const buffer& data)
->;
-
-/// WS Finish Callback
-using ws_finish_cb = std::function<
-    void(context<ws>&&)
->;
 
 struct ws_tag {};
 const ws_tag WS;
@@ -185,5 +96,7 @@ struct ws_connection {
     ws_message_cb   message_cb;
     ws_finish_cb    finish_cb;
 };
+
+NX_API void encode_frame_data(buffer& b, bool binary, const buffer& data);
 
 }   // namespace nx

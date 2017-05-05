@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <arpa/inet.h>
- #include <uuid/uuid.h>
+#include <uuid/uuid.h>
 
 #include <random>
 #include <iterator>
@@ -13,6 +13,7 @@
 #include <nx/base64.hpp>
 #include <nx/endian.hpp>
 
+#include <nx/iws.hpp>
 #include <nx/config.h>
 #include <nx/tcp.hpp>
 #include <nx/request.hpp>
@@ -34,18 +35,8 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
-struct NX_API ws_frame
-{
-    bool fin;
-    bool rsv1;
-    bool rsv2;
-    bool rsv3;
-    uint8_t opcode;
-    buffer payload;
-};
-
 class NX_API ws
-    : public tcp_base<ws>
+    : public tcp_base<ws>, public iws
 {
   public:
     using base_type = tcp_base<ws>;
@@ -72,7 +63,7 @@ class NX_API ws
 
         base_type::start();
         if (connect_cb_) {
-            connect_cb_(context<this_type>(self()));
+            connect_cb_(context(self()));
         } 
     }
 
@@ -179,7 +170,7 @@ class NX_API ws
 
                 case WS_OP_TEXT_FRAME:
                 case WS_OP_BINARY_FRAME:
-                    message_cb_(context<this_type>(self()), f.payload);
+                    message_cb_(context(self()), f.payload);
                 break;
 
                 case WS_OP_CLOSE: {
@@ -194,7 +185,7 @@ class NX_API ws
     void process_close()
     {
         if (finish_cb_) {
-            finish_cb_(context<this_type>(self()));
+            finish_cb_(context(self()));
         }
     }
 
@@ -251,6 +242,19 @@ class NX_API ws
 
         return challenge;
     }
+
+
+    void stop_socket()
+    { stop(); }
+
+    void push_in_socket(buffer&& b)
+    { (*this) << std::move(b);}
+
+    void push_in_socket(std::string&& s)
+    { (*this) << std::move(s);}
+
+    void push_in_socket(std::string& s)
+    { (*this) << s;}
 
 private:
     void finish(uint16_t code)
