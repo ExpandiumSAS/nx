@@ -46,7 +46,8 @@ struct NX_API endpoint_generic
 
     endpoint_generic(const std::string& addr, uint16_t port = 0)
     {
-        if (addr[0] == '/')
+        if (addr[0] == '/' ||
+            addr[0] == '~' )
         {
             ep_local = make_endpoint_local(addr);
             ep_protocol = LOCAL;
