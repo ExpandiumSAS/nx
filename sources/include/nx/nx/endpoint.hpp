@@ -37,9 +37,12 @@ struct NX_API endpoint_generic
 {
     enum protocol
     {
+        UNINITIALIZED,
         TCP,
         LOCAL
     };
+
+    endpoint_generic() = default;
 
     endpoint_generic(const std::string& addr, uint16_t port = 0)
     {
@@ -67,7 +70,7 @@ struct NX_API endpoint_generic
         ep_local = ep;
     }
 
-    protocol ep_protocol;
+    protocol ep_protocol = UNINITIALIZED;
     endpoint_tcp ep_tcp;
     endpoint_local ep_local;
 };

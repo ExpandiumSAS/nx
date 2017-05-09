@@ -15,8 +15,7 @@ namespace nx {
 class NX_API http_request
 {
 public:
-    http_request(const method& m, const endpoint_tcp& ep, int32_t sync);
-    http_request(const method& m, const endpoint_local& ep, int32_t sync);
+    http_request(const method& m, const endpoint_generic& ep, int32_t sync);
     http_request(const http_request& other) = delete;
     http_request(http_request&& other);
     virtual ~http_request();
@@ -40,9 +39,7 @@ private:
 
     int32_t timeout_;
     request req_;
-    endpoint_tcp ep_;
-    endpoint_local local_ep_;
-    bool is_local_ = false;
+    endpoint_generic ep_;
     reply_cb reply_cb_;
 };
 
@@ -50,16 +47,12 @@ class NX_API httpc
 {
 public:
     http_request operator()(const method& m, const endpoint_generic& ep);
-    http_request operator()(const method& m, const endpoint_tcp& ep);
-    http_request operator()(const method& m, const endpoint_local& ep);
 };
 
 class NX_API httpc_sync
 {
 public:
     http_request operator()(const method& m, const endpoint_generic& ep, int32_t timeout = 0);
-    http_request operator()(const method& m, const endpoint_tcp& ep, int32_t timeout = 0);
-    http_request operator()(const method& m, const endpoint_local& ep, int32_t timeout = 0);
 };
 
 } // namespace nx

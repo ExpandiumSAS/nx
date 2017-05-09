@@ -57,7 +57,7 @@ int main(int ac, char **av)
     };
 
     // Bind and listen
-    srv(make_endpoint_local("/tmp/nx"));
+    srv(make_endpoint("/tmp/nx"));
 
     cv.wait();
     nx::stop();
