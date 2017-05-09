@@ -234,37 +234,37 @@ serve(Http& h, const typename Http::endpoint_type& ep, OnRequest&& cb)
 }
 
 
-template <typename OnReply>
-http_tcp&
-async_connect(const endpoint_tcp& ep, request&& req, OnReply&& cb)
+template <typename Http, typename OnReply>
+Http&
+async_connect(const typename Http::endpoint_type& ep, request&& req, OnReply&& cb)
 {
-    auto p = new_object<http_tcp>(std::move(req), std::move(cb));
+    auto p = new_object<Http>(std::move(req), std::move(cb));
     auto& h = *p;
 
-    h[tags::on_read] = [](http_tcp& t) {
+    h[tags::on_read] = [](Http& t) {
         t.process_reply();
     };
 
     return connect(
         h,
         ep,
-        [](http_tcp& t) {
+        [](Http& t) {
             t.send_request();
         }
     );
 }
 
-template <typename OnReply>
-http_tcp&
-sync_connect(const endpoint_tcp& ep, request&& req, OnReply&& cb, int32_t timeout_s)
+template <typename Http, typename OnReply>
+Http&
+sync_connect(const typename Http::endpoint_type& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 {
     auto t = std::make_shared<task>();
-    auto p = new_object<http_tcp>(std::move(req), std::move(cb), t->get_io_service());
+    auto p = new_object<Http>(std::move(req), std::move(cb), t->get_io_service());
 
     auto& h = *p;
     cond_var cv;
 
-    h[tags::on_read] = [&cv](http_tcp& t) {
+    h[tags::on_read] = [&cv](Http& t) {
         if (t.process_reply()) {
             cv.notify();
         }
@@ -273,63 +273,7 @@ sync_connect(const endpoint_tcp& ep, request&& req, OnReply&& cb, int32_t timeou
     auto& result = connect(
         h,
         ep,
-        [](http_tcp& t) {
-            t.send_request();
-        }
-    );
-
-    if (timeout_s > 0) {
-        cv.wait_for((uint64_t)timeout_s * 1000);
-    } else {
-        cv.wait();
-    }
-    t->stop();
-
-    return result;
-}
-
-// fonctions temporaires en attendant que je template
-
-template <typename OnReply>
-http_local&
-async_connect(const endpoint_local& ep, request&& req, OnReply&& cb)
-{
-    auto p = new_object<http_local>(std::move(req), std::move(cb));
-    auto& h = *p;
-
-    h[tags::on_read] = [](http_local& t) {
-        t.process_reply();
-    };
-
-    return connect(
-        h,
-        ep,
-        [](http_local& t) {
-            t.send_request();
-        }
-    );
-}
-
-template <typename OnReply>
-http_local&
-sync_connect(const endpoint_local& ep, request&& req, OnReply&& cb, int32_t timeout_s)
-{
-    auto t = std::make_shared<task>();
-    auto p = new_object<http_local>(std::move(req), std::move(cb), t->get_io_service());
-
-    auto& h = *p;
-    cond_var cv;
-
-    h[tags::on_read] = [&cv](http_local& t) {
-        if (t.process_reply()) {
-            cv.notify();
-        }
-    };
-
-    auto& result = connect(
-        h,
-        ep,
-        [](http_local& t) {
+        [](Http& t) {
             t.send_request();
         }
     );

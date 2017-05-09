@@ -47,17 +47,17 @@ http_request::start()
     if (ep_.ep_protocol == endpoint_generic::protocol::TCP)
     {
         if (timeout_ >= 0) { 
-            sync_connect(ep_.ep_tcp, std::move(req_), std::move(reply_cb_), timeout_);
+            sync_connect<http_tcp>(ep_.ep_tcp, std::move(req_), std::move(reply_cb_), timeout_);
         }   else {
-            async_connect(ep_.ep_tcp, std::move(req_), std::move(reply_cb_));
+            async_connect<http_tcp>(ep_.ep_tcp, std::move(req_), std::move(reply_cb_));
         }
     }
     else
     {
         if (timeout_ >= 0) { 
-            sync_connect(ep_.ep_local, std::move(req_), std::move(reply_cb_), timeout_);
+            sync_connect<http_local>(ep_.ep_local, std::move(req_), std::move(reply_cb_), timeout_);
         }   else {
-            async_connect(ep_.ep_local, std::move(req_), std::move(reply_cb_));
+            async_connect<http_local>(ep_.ep_local, std::move(req_), std::move(reply_cb_));
         }
     }
 }
