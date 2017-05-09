@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE(http_server_socket_file)
 
     deadline.start();
 
-    auto ep = make_endpoint_local("/tmp/nx");
+    auto ep = make_endpoint("/tmp/nx");
     const char* hello_world = "Hello, world!";
 
     httpd hd;

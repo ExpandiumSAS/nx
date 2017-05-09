@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(local_httpd_json_collection)
     hd << coll;
 
     // Start server
-    auto sep = hd(make_endpoint_local("/tmp/nx"));
+    auto sep = hd(make_endpoint("/tmp/nx"));
 
     httpc hc;
 

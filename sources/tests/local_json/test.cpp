@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(httpd_json)
 
     add_json_format<test::person>(test::person_fmt);
 
-    auto ep = make_endpoint_local("/tmp/nx");
+    auto ep = make_endpoint("/tmp/nx");
 
     test::person p{ "some id", "John Doe", 42 };
 

@@ -37,12 +37,12 @@ BOOST_AUTO_TEST_CASE(local_nested)
             ;
     };
 
-    auto ep2 = make_endpoint_local("/tmp/nx");
+    auto ep2 = make_endpoint("/tmp/nx");
     auto sep2 = hd2(ep2);
 
     /////////////// start httpd 1 //////////////////////
 
-    auto ep = make_endpoint_local("/tmp/nx1");
+    auto ep = make_endpoint("/tmp/nx1");
     const char* hello_world = "Hello, world 1!";
     bool reply_ok = false, reply_ok2 = false;
     bool got_reply = false, got_reply2 = false;
