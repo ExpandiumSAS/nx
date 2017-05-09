@@ -10,13 +10,15 @@ using namespace nx;
 int main(int ac, char **av)
 {
     httpc cli;
-    std::string user_input;
-    while (std::cin >> user_input)
+    std::string action;
+    std::string target;
+    while (std::cin >> action >> target)
     {
         cli(
             GET,
-            make_endpoint_local("/tmp/nx")) /
-            user_input = [&](const reply &rep, buffer &data) {
+            make_endpoint("127.0.0.1", 4242)) /
+            action << header{ "target", target }
+            = [&](const reply &rep, buffer &data) {
             if (rep)
             {
                 std::cout

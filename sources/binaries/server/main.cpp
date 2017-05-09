@@ -8,29 +8,44 @@
 
 using namespace nx;
 
-#define MAX_LEN 1024
-
 int main(int ac, char **av)
 {
     bool on = true;
     httpd srv;
+    httpc cli;
     cond_var cv;
     // Register a GET handler
     srv(GET) / "Hello" = [&](const request &req, buffer &data, reply &rep) {
         if (on)
         {
-            rep
-                << text_plain
-                << "Hello, world!";
+            const auto& target = req.h("target");
+            rep.postpone();
+            cli(
+                GET,
+                make_endpoint("/tmp/nx_" + target)) /
+                "HELLO_NAME" = [&](const reply &call_rep, buffer &call_data) {
+                    rep
+                        << text_plain
+                        << call_data;
+                    rep.done();
+                };
         }
     };
 
     srv(GET) / "Bye" = [&](const request &req, buffer &data, reply &rep) {
         if (on)
         {
-            rep
-                << text_plain
-                << "Bye world!";
+            const auto& target = req.h("target");
+            rep.postpone();
+            cli(
+                GET,
+                make_endpoint("/tmp/nx_" + target)) /
+                "BYE_NAME" = [&](const reply &call_rep, buffer &call_data) {
+                    rep
+                        << text_plain
+                        << call_data;
+                    rep.done();
+                };
         }
     };
 
@@ -50,14 +65,11 @@ int main(int ac, char **av)
 
     srv(GET) / "Quit" = [&](const request &req, buffer &data, reply &rep) {
         on = false;
-        rep
-            << text_plain
-            << "Server is quitting!";
         cv.notify();
     };
 
     // Bind and listen
-    srv(make_endpoint("/tmp/nx"));
+    srv(make_endpoint("127.0.0.1", 4242));
 
     cv.wait();
     nx::stop();
