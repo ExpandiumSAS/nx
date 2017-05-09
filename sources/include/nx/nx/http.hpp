@@ -216,18 +216,18 @@ private:
 using http_tcp = http<tcp_base>;
 using http_local = http<local_socket_base>;
 
-template <typename OnRequest>
-endpoint
-serve(http_tcp& h, const endpoint& ep, OnRequest&& cb)
+template <typename Http, typename OnRequest>
+typename Http::endpoint_type
+serve(Http& h, const typename Http::endpoint_type& ep, OnRequest&& cb)
 {
     return
         serve(
             h,
             ep,
-            [cb = std::move(cb)](http_tcp& c) {
+            [cb = std::move(cb)](Http& c) {
                 c << std::move(cb);
             },
-            [](http_tcp& c) {
+            [](Http& c) {
                 c.process_request();
             }
         );
@@ -236,7 +236,7 @@ serve(http_tcp& h, const endpoint& ep, OnRequest&& cb)
 
 template <typename OnReply>
 http_tcp&
-async_connect(const endpoint& ep, request&& req, OnReply&& cb)
+async_connect(const endpoint_tcp& ep, request&& req, OnReply&& cb)
 {
     auto p = new_object<http_tcp>(std::move(req), std::move(cb));
     auto& h = *p;
@@ -256,7 +256,7 @@ async_connect(const endpoint& ep, request&& req, OnReply&& cb)
 
 template <typename OnReply>
 http_tcp&
-sync_connect(const endpoint& ep, request&& req, OnReply&& cb, int32_t timeout_s)
+sync_connect(const endpoint_tcp& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 {
     auto t = std::make_shared<task>();
     auto p = new_object<http_tcp>(std::move(req), std::move(cb), t->get_io_service());
@@ -289,23 +289,6 @@ sync_connect(const endpoint& ep, request&& req, OnReply&& cb, int32_t timeout_s)
 }
 
 // fonctions temporaires en attendant que je template
-template <typename OnRequest>
-endpoint_local
-serve(http_local& h, const endpoint_local& ep, OnRequest&& cb)
-{
-    return
-        serve(
-            h,
-            ep,
-            [cb = std::move(cb)](http_local& c) {
-                c << std::move(cb);
-            },
-            [](http_local& c) {
-                c.process_request();
-            }
-        );
-}
-
 
 template <typename OnReply>
 http_local&

@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     std::atomic_bool got_msg{ false };
 
     auto endpoint = nx::serve<nx::tcp>(
-        nx::make_endpoint("127.0.0.1", 0),
+        nx::make_endpoint_tcp("127.0.0.1", 0),
         [&](nx::tcp& t) {
             got_new_connection = true;
         },

@@ -26,8 +26,24 @@ httpd::operator()(const ws_tag& t)
     return r.back();
 }
 
-endpoint
-httpd::operator()(const endpoint& ep)
+endpoint_generic
+httpd::operator()(const endpoint_generic& ep)
+{
+    if (ep.ep_protocol == endpoint_generic::protocol::TCP) {
+        return
+            (*this)(
+                ep.ep_tcp
+            );
+    } else {
+        return
+            (*this)(
+                ep.ep_local
+            );
+    }
+}
+
+endpoint_tcp
+httpd::operator()(const endpoint_tcp& ep)
 {
     return
         serve(

@@ -2,7 +2,7 @@
 
 namespace nx {
 
-http_request::http_request(const method& m, const endpoint& ep, int32_t timeout)
+http_request::http_request(const method& m, const endpoint_tcp& ep, int32_t timeout)
 : timeout_(timeout),
   req_(m),
   ep_(ep),
@@ -73,7 +73,17 @@ http_request::start()
 }
 
 http_request
-httpc::operator()(const method& m, const endpoint& ep)
+httpc::operator()(const method& m, const endpoint_generic& ep)
+{
+    if (ep.ep_protocol == endpoint_generic::protocol::TCP) {
+        return (*this)(m, ep.ep_tcp);
+    } else {
+        return (*this)(m, ep.ep_local);
+    }
+}
+
+http_request
+httpc::operator()(const method& m, const endpoint_tcp& ep)
 { return http_request(m, ep, -1); }
 
 http_request
@@ -81,7 +91,17 @@ httpc::operator()(const method& m, const endpoint_local& ep)
 { return http_request(m, ep, -1); }
 
 http_request
-httpc_sync::operator()(const method& m, const endpoint& ep, int32_t timeout)
+httpc_sync::operator()(const method& m, const endpoint_generic& ep, int32_t timeout)
+{
+    if (ep.ep_protocol == endpoint_generic::protocol::TCP) {
+        return (*this)(m, ep.ep_tcp, timeout);
+    } else {
+        return (*this)(m, ep.ep_local, timeout);
+    }
+}
+
+http_request
+httpc_sync::operator()(const method& m, const endpoint_tcp& ep, int32_t timeout)
 { return http_request(m, ep, timeout); }
 
 http_request

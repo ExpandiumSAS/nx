@@ -7,12 +7,12 @@
 namespace nx {
 
 inline 
-endpoint
+endpoint_tcp
 resolve_endpoint(const std::string& host, uint16_t port = 0)
 {
     auto t = nx::service::get().available_task();
     boost::system::error_code ec;
-    endpoint result;
+    endpoint_tcp result;
 
     asio::ip::tcp::resolver::query q(host, std::to_string(port), asio::ip::resolver_query_base::address_configured);
     asio::ip::tcp::resolver resolver(t->get_io_service());
