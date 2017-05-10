@@ -15,7 +15,7 @@ int main(int ac, char **av)
     httpc cli;
     cond_var cv;
     // Register a GET handler
-    srv(GET) / "Hello" = [&](const request &req, buffer &data, reply &rep) {
+    srv(GET) / "Hello" = [&](const request& req, buffer& data, reply &rep) {
         if (on)
         {
             const auto& target = req.h("target");
@@ -23,7 +23,7 @@ int main(int ac, char **av)
             cli(
                 GET,
                 make_endpoint("/tmp/nx_" + target)) /
-                "HELLO_NAME" = [&](const reply &call_rep, buffer &call_data) {
+                "HELLO_NAME" = [&](const reply& call_rep, buffer& call_data) {
                     rep
                         << text_plain
                         << call_data;
@@ -32,7 +32,7 @@ int main(int ac, char **av)
         }
     };
 
-    srv(GET) / "Bye" = [&](const request &req, buffer &data, reply &rep) {
+    srv(GET) / "Bye" = [&](const request& req, buffer& data, reply& rep) {
         if (on)
         {
             const auto& target = req.h("target");
@@ -40,7 +40,7 @@ int main(int ac, char **av)
             cli(
                 GET,
                 make_endpoint("/tmp/nx_" + target)) /
-                "BYE_NAME" = [&](const reply &call_rep, buffer &call_data) {
+                "BYE_NAME" = [&](const reply& call_rep, buffer& call_data) {
                     rep
                         << text_plain
                         << call_data;
@@ -49,21 +49,21 @@ int main(int ac, char **av)
         }
     };
 
-    srv(GET) / "On" = [&](const request &req, buffer &data, reply &rep) {
+    srv(GET) / "On" = [&](const request& req, buffer& data, reply& rep) {
         on = true;
         rep
             << text_plain
             << "Server is on!";
     };
 
-    srv(GET) / "Off" = [&](const request &req, buffer &data, reply &rep) {
+    srv(GET) / "Off" = [&](const request& req, buffer& data, reply& rep) {
         on = false;
         rep
             << text_plain
             << "Server is off!";
     };
 
-    srv(GET) / "Quit" = [&](const request &req, buffer &data, reply &rep) {
+    srv(GET) / "Quit" = [&](const request& req, buffer& data, reply& rep) {
         on = false;
         cv.notify();
     };

@@ -18,7 +18,7 @@ int main(int ac, char **av)
             GET,
             make_endpoint("127.0.0.1", 4242)) /
             action << header{ "target", target }
-            = [&](const reply &rep, buffer &data) {
+            = [&](const reply& rep, buffer &data) {
             if (rep)
             {
                 std::cout

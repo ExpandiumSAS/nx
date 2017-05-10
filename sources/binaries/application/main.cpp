@@ -21,8 +21,8 @@ int main(int ac, char **av)
     httpd srv;
     cond_var cv;
     // Register a GET handler
-    srv(GET) / "HELLO_NAME" = [&](const request &req, buffer &data, reply &rep) {
-        if (on)
+    srv(GET) / "HELLO_NAME" = [&](const request& req, buffer& data, reply& rep) {
+        if (on) 
         {
             rep
                 << text_plain
@@ -32,7 +32,7 @@ int main(int ac, char **av)
         }
     };
 
-    srv(GET) / "BYE_NAME" = [&](const request &req, buffer &data, reply &rep) {
+    srv(GET) / "BYE_NAME" = [&](const request& req, buffer& data, reply& rep) {
         if (on)
         {
             rep
