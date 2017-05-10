@@ -80,8 +80,11 @@ inline
 endpoint_generic
 make_endpoint(const std::string &address, uint16_t port = 0)
 {
-    endpoint_generic ep(address, port);
-    return (ep);
+    return
+        endpoint_generic ep(
+                    address,
+                    port
+        );
 }
 
 } // namespace nx
