@@ -15,7 +15,7 @@ int main(int ac, char **av)
     httpc cli;
     cond_var cv;
     // Register a GET handler
-    srv(GET) / "Hello" = [&](const request& req, buffer& data, reply &rep) {
+    srv(GET) / "Hello" = [&](const request& req, buffer& data, reply& rep) {
         if (on)
         {
             const auto& target = req.h("target");

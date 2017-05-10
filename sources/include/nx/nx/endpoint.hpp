@@ -78,7 +78,7 @@ struct NX_API endpoint_generic
 
 inline
 endpoint_generic
-make_endpoint(const std::string &address, uint16_t port = 0)
+make_endpoint(const std::string& address, uint16_t port = 0)
 {
     return
         endpoint_generic ep(
