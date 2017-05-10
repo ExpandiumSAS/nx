@@ -48,7 +48,7 @@ class NX_API ws
     {}
 
     template <typename OtherSocket>
-    ws(OtherSocket &&sock)
+    ws(OtherSocket&& sock)
     : base_type(std::move(sock)),
     uid_(make_uid())
     {}
@@ -68,7 +68,7 @@ class NX_API ws
         } 
     }
 
-    bool parse_frame(ws_frame &f)
+    bool parse_frame(ws_frame& f)
     {
         auto& b = this->rbuf();
         auto data = b.data();
@@ -205,7 +205,7 @@ class NX_API ws
     const std::string& uid() const
     { return uid_; }
 
-    static void server_handshake(const request &req, reply &rep)
+    static void server_handshake(const request& req, reply& rep)
     {
         bool valid_request =
             req == GET
@@ -231,7 +231,7 @@ class NX_API ws
             ;
     }
 
-    static std::string server_challenge(const request &req)
+    static std::string server_challenge(const request& req)
     {
         nx::SHA1 s;
 

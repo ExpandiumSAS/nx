@@ -93,7 +93,7 @@ public:
     const resolver_type& resolver() const
     { return *resolver_ptr_; }
 
-    void reuse_addr(acceptor_type &a, const endpoint_type&)
+    void reuse_addr(acceptor_type& a, const endpoint_type&)
     {
         a.set_option(asio::ip::tcp::acceptor::reuse_address(true));
     }

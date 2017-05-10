@@ -75,7 +75,7 @@ public:
     const acceptor_type& acceptor() const
     { return *acceptor_ptr_; }
 
-    void reuse_addr(acceptor_type &, const endpoint_type& from)
+    void reuse_addr(acceptor_type& , const endpoint_type& from)
     {
         unlink(from.path().c_str());
     }

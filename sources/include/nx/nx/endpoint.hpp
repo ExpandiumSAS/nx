@@ -81,7 +81,7 @@ endpoint_generic
 make_endpoint(const std::string& address, uint16_t port = 0)
 {
     return
-        endpoint_generic ep(
+        endpoint_generic(
                     address,
                     port
         );
