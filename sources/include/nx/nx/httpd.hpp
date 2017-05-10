@@ -17,14 +17,18 @@ public:
     route& operator()(const method& m);
     route& operator()(const ws_tag& m);
 
-    endpoint operator()(const endpoint& ep);
+
+    endpoint_generic operator()(const endpoint_generic& ep);
+    endpoint_tcp operator()(const endpoint_tcp& ep);
+    endpoint_local operator()(const endpoint_local& ep);
 
     httpd& operator<<(json_collection_base& c);
 
 private:
     void operator()(request& req, buffer& data, reply& rep);
 
-    http s_;
+    http_tcp s_;
+    http_local local_s_;
     routes_map routes_map_;
 };
 

@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_CASE(ws_server)
     std::string accept_value = "dGhlIHNhbXBsZSBub25jZQ==";
     request req;
     req << header{ Sec_WebSocket_Key, accept_value };
-    BOOST_CHECK_EQUAL("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", ws::server_challenge(req));
+    BOOST_CHECK_EQUAL("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", ws<tcp_base>::server_challenge(req));
 
     // httpd hd;
     // hd(WS) / "echo" = ws_connection(

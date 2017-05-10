@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(tcp_resolver)
     std::atomic_bool got_new_connection{ false };
 
     nx::serve<nx::tcp>(
-        nx::make_endpoint("127.0.0.1", 54321),
+        nx::make_endpoint_tcp("127.0.0.1", 54321),
         [&](nx::tcp& t) {
             got_new_connection = true;
             t.stop();
@@ -53,10 +53,10 @@ BOOST_AUTO_TEST_CASE(tcp_resolver)
     cv.wait();
 
     auto ep = nx::resolve_endpoint("localhost", 80);
-    BOOST_CHECK_EQUAL(ep, nx::make_endpoint("::1", 80));
+    BOOST_CHECK_EQUAL(ep, nx::make_endpoint_tcp("::1", 80));
 
     auto ep2 = nx::resolve_endpoint("127.0.0.1", 80);
-    BOOST_CHECK_EQUAL(ep2, nx::make_endpoint("127.0.0.1", 80));
+    BOOST_CHECK_EQUAL(ep2, nx::make_endpoint_tcp("127.0.0.1", 80));
 
     nx::stop();
 

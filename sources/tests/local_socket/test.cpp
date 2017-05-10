@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE tcp
+#define BOOST_TEST_MODULE local_socket
 
 #include <iostream>
 #include <string>
@@ -8,7 +8,7 @@
 
 #include <nx/nx.hpp>
 
-BOOST_AUTO_TEST_CASE(tcp_client_server)
+BOOST_AUTO_TEST_CASE(local_socket_client_server)
 {
     using namespace nx::tags;
 
@@ -27,12 +27,12 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     std::atomic_bool got_new_connection{ false };
     std::atomic_bool got_msg{ false };
 
-    auto endpoint = nx::serve<nx::tcp>(
-        nx::make_endpoint_tcp("127.0.0.1", 0),
-        [&](nx::tcp& t) {
+    auto endpoint = nx::serve<nx::local_socket>(
+        nx::make_endpoint_local("/tmp/nx"),
+        [&](nx::local_socket& t) {
             got_new_connection = true;
         },
-        [&](nx::tcp& t) {
+        [&](nx::local_socket& t) {
             std::string str;
 
             t >> str;
@@ -50,12 +50,12 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     std::atomic_bool got_correct_reply{ false };
     std::atomic_bool disconnected{ false };
 
-    auto& c = nx::connect<nx::tcp>(
+    auto& c = nx::connect<nx::local_socket>(
         endpoint,
-        [&](nx::tcp& t) {
+        [&](nx::local_socket& t) {
             connected = true;
 
-            t[on_close] = [&](nx::tcp& t) {
+            t[on_close] = [&](nx::local_socket& t) {
                 disconnected = true;
             };
 
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
         }
     );
 
-    c[on_read] = [&](nx::tcp& t) {
+    c[on_read] = [&](nx::local_socket& t) {
         got_reply = true;
 
         std::string str;

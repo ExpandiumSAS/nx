@@ -8,12 +8,13 @@
 #include <string>
 #include <memory>
 
+#include <nx/iws.hpp>
+
 namespace nx {
 
 /// Forward declaration
-class ws; 
-using ws_ptr = std::shared_ptr<ws>;
-using ws_weak_ptr = std::weak_ptr<ws>;
+using ws_ptr = std::shared_ptr<iws>;
+using ws_weak_ptr = std::weak_ptr<iws>;
 
 const uint8_t text_frame_type = 0;
 const uint8_t binary_frame_type = 1;
@@ -69,22 +70,6 @@ private:
     buffer data_;
     uint8_t type_{ text_frame_type };
 };
-
-
-/// WS Connection Callback 
-using ws_connect_cb = std::function<
-    void(context&&)
->;
-
-/// WS Message Callback
-using ws_message_cb = std::function<
-    void(context&&, const buffer& data)
->;
-
-/// WS Finish Callback
-using ws_finish_cb = std::function<
-    void(context&&)
->;
 
 struct ws_tag {};
 const ws_tag WS;

@@ -91,7 +91,7 @@ context::stop()
 { 
     async() << [this]() {
         if (auto w = w_.lock()) {
-            w->stop();
+            w->stop_socket();
         }
     }; 
 }
@@ -127,7 +127,8 @@ context::flush()
         buffer f;
         encode_frame_data(f, type_ == binary_frame_type, data_);
         if (auto w = w_.lock()) {
-            (*w) << std::move(f);
+            //(*w) << std::move(f);
+            w->push_in_socket(std::move(f));
         }
         data_.clear();
     }
