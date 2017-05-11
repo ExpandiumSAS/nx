@@ -2,6 +2,7 @@
 #define __NX_ENDPOINT_H__
 
 #include <stdint.h>
+#include <fstream>
 
 #include <boost/asio.hpp>
 
@@ -47,13 +48,10 @@ struct NX_API endpoint_generic
     endpoint_generic(const std::string& addr, uint16_t port = 0)
     {
         if (addr[0] == '/' ||
-            addr[0] == '~' )
-        {
+            addr[0] == '~' ){
             ep_local = make_endpoint_local(addr);
             ep_protocol = LOCAL;
-        }
-        else
-        {
+        } else {
             ep_protocol = TCP;
             ep_tcp = make_endpoint_tcp(addr, port);
         }
@@ -75,6 +73,18 @@ struct NX_API endpoint_generic
     endpoint_tcp ep_tcp;
     endpoint_local ep_local;
 };
+
+inline
+std::ostream&
+operator<<(std::ostream& os, const endpoint_generic& ep)
+{
+    if (ep.ep_protocol == endpoint_generic::protocol::LOCAL){
+        os << ep.ep_local;
+    } else {
+        os << ep.ep_tcp;
+    }
+    return os;
+}
 
 inline
 endpoint_generic
