@@ -69,6 +69,24 @@ struct NX_API endpoint_generic
         ep_local = ep;
     }
 
+    bool operator==(const endpoint_generic& other)
+    {
+        if (ep_protocol != other.ep_protocol) {
+            return false;
+        }
+
+        if (ep_protocol == LOCAL) {
+            return ep_local == other.ep_local;
+        } else {
+            return ep_tcp == other.ep_tcp;
+        }
+    }
+
+    bool operator!=(const endpoint_generic& other)
+    {
+        return !(*this == other);
+    }
+
     protocol ep_protocol = UNINITIALIZED;
     endpoint_tcp ep_tcp;
     endpoint_local ep_local;
