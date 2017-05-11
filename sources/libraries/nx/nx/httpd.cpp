@@ -26,10 +26,10 @@ httpd::operator()(const ws_tag& t)
     return r.back();
 }
 
-endpoint_generic
-httpd::operator()(const endpoint_generic& ep)
+endpoint
+httpd::operator()(const endpoint& ep)
 {
-    if (ep.ep_protocol == endpoint_generic::protocol::TCP) {
+    if (ep.ep_protocol == endpoint::protocol::TCP) {
         return
             (*this)(
                 ep.ep_tcp

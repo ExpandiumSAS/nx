@@ -18,7 +18,7 @@ public:
     route& operator()(const ws_tag& m);
 
 
-    endpoint_generic operator()(const endpoint_generic& ep);
+    endpoint operator()(const endpoint& ep);
     endpoint_tcp operator()(const endpoint_tcp& ep);
     endpoint_local operator()(const endpoint_local& ep);
 
