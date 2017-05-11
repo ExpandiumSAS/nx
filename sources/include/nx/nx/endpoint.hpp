@@ -34,7 +34,7 @@ make_endpoint_local(const std::string& path)
         );
 }
 
-struct NX_API endpoint_generic
+struct NX_API endpoint
 {
     enum protocol
     {
@@ -43,9 +43,9 @@ struct NX_API endpoint_generic
         LOCAL
     };
 
-    endpoint_generic() = default;
+    endpoint() = default;
 
-    endpoint_generic(const std::string& addr, uint16_t port = 0)
+    endpoint(const std::string& addr, uint16_t port = 0)
     {
         if (addr[0] == '/' ||
             addr[0] == '~' ){
@@ -57,19 +57,19 @@ struct NX_API endpoint_generic
         }
     }
 
-    endpoint_generic(const endpoint_tcp& ep)
+    endpoint(const endpoint_tcp& ep)
     {
         ep_protocol = TCP;
         ep_tcp = ep;
     }
 
-    endpoint_generic(const endpoint_local& ep)
+    endpoint(const endpoint_local& ep)
     {
         ep_protocol = LOCAL;
         ep_local = ep;
     }
 
-    bool operator==(const endpoint_generic& other)
+    bool operator==(const endpoint& other)
     {
         if (ep_protocol != other.ep_protocol) {
             return false;
@@ -82,7 +82,7 @@ struct NX_API endpoint_generic
         }
     }
 
-    bool operator!=(const endpoint_generic& other)
+    bool operator!=(const endpoint& other)
     {
         return !(*this == other);
     }
@@ -94,9 +94,9 @@ struct NX_API endpoint_generic
 
 inline
 std::ostream&
-operator<<(std::ostream& os, const endpoint_generic& ep)
+operator<<(std::ostream& os, const endpoint& ep)
 {
-    if (ep.ep_protocol == endpoint_generic::protocol::LOCAL){
+    if (ep.ep_protocol == endpoint::protocol::LOCAL){
         os << ep.ep_local;
     } else {
         os << ep.ep_tcp;
@@ -105,11 +105,11 @@ operator<<(std::ostream& os, const endpoint_generic& ep)
 }
 
 inline
-endpoint_generic
+endpoint
 make_endpoint(const std::string& address, uint16_t port = 0)
 {
     return
-        endpoint_generic(
+        endpoint(
                     address,
                     port
         );
