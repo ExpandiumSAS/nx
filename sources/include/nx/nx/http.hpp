@@ -24,16 +24,15 @@ using reply_cb = std::function<
 struct http_async_tag {};
 struct http_sync_tag {};
 
-template <template <typename, typename ...> class T>
-class NX_API http : public T<http<T> >
+template <template <typename, typename ...> class BaseClass>
+class NX_API http : public BaseClass<http<BaseClass>>
 {
 public:
-    using base_type = T<http<T> >;
-    using ws_type = ws<T>;
-    //using ws_type = ws;
-    using this_type = http<T>;
+    using base_type = BaseClass<http<BaseClass>>;
+    using ws_type = ws<BaseClass>;
+    using this_type = http<BaseClass>;
 
-    using base_type::T;
+    using base_type::base_type;
 
     http() = default;
     http(request&& req, reply_cb&& cb)
