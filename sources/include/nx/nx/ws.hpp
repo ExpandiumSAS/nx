@@ -35,13 +35,13 @@ const std::string ws_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 const std::size_t ws_max_len = 10 * 1024 * 1024;
 
-template <template <typename, typename ...> class T>
+template <template <typename, typename ...> class BaseClass>
 class NX_API ws
-    : public T<ws<T> >, public iws
+    : public BaseClass<ws<BaseClass>>, public iws
 {
   public:
-    using base_type = T<ws<T> >;
-    using this_type = ws<T>;
+    using base_type = BaseClass<ws<BaseClass>>;
+    using this_type = ws<BaseClass>;
 
     ws()
     : uid_(make_uid())
