@@ -30,10 +30,9 @@ class NX_API http : public T<http<T> >
 public:
     using base_type = T<http<T> >;
     using ws_type = ws<T>;
-    //using ws_type = ws;
     using this_type = http<T>;
 
-    using base_type::T;
+    using base_type::base_type;
 
     http() = default;
     http(request&& req, reply_cb&& cb)
