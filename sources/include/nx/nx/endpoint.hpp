@@ -69,7 +69,7 @@ struct NX_API endpoint
         ep_local = ep;
     }
 
-    bool operator==(const endpoint& other)
+    bool operator==(const endpoint& other) const
     {
         if (ep_protocol != other.ep_protocol) {
             return false;
@@ -82,7 +82,7 @@ struct NX_API endpoint
         }
     }
 
-    bool operator!=(const endpoint& other)
+    bool operator!=(const endpoint& other) const
     {
         return !(*this == other);
     }
