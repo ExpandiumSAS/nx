@@ -77,6 +77,7 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     };
 
     cv.wait();
+
     nx::stop();
 
     BOOST_CHECK_MESSAGE(got_new_connection, "server got a connection");
@@ -86,3 +87,37 @@ BOOST_AUTO_TEST_CASE(tcp_client_server)
     BOOST_CHECK_MESSAGE(got_correct_reply, "client got correct reply");
     BOOST_CHECK_MESSAGE(disconnected, "client was disconnected");
 }
+
+//BOOST_AUTO_TEST_CASE(tcp_connect_error)
+//{
+//    using namespace nx::tags;
+//
+//    nx::timer deadline;
+//    nx::cond_var cv;
+//
+//    deadline(5) = [&](nx::timer& t) {
+//        t.stop();
+//        cv.notify();
+//    };
+//
+//    deadline.start();
+//
+//    bool connect_error = false;
+//
+//    auto& c = nx::connect<nx::tcp>(
+//        nx::make_endpoint_tcp("127.0.0.1", 0),
+//        [&](nx::tcp& t) {
+//
+//            t[on_close] = [&](nx::tcp& t) {};
+//        }
+//    );
+//
+//    c[on_error] = [&](nx::tcp& t, const nx::error_code& ec) {
+//        connect_error = true;
+//    };
+//
+//    cv.wait();
+//    nx::stop();
+//
+//    BOOST_CHECK_MESSAGE(connect_error, "connection error");
+//}
