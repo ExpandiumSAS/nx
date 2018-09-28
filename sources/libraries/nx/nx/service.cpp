@@ -3,6 +3,8 @@
 #include <nx/service.hpp>
 #include <nx/handle_error.hpp>
 
+#include <cxxu/thread.hpp>
+
 namespace nx {
 
 std::once_flag flag;
@@ -73,6 +75,8 @@ service::start()
 
     t_ = std::thread(
         [this]() {
+            cxxu::thread_set_name("nx::service");
+
             io_service_.run();
             io_service_.reset();
 
